@@ -95,7 +95,7 @@ resource "aws_security_group" "demo" {
     ipv6_cidr_blocks = ["::/0"]
   }
   egress {
-    description      = "Pull images, reach AWS APIs and Let us Encrypt"
+    description      = "Pull images, reach AWS APIs and ACME"
     from_port        = 0
     to_port          = 0
     protocol         = "-1"
