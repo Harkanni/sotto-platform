@@ -1,0 +1,105 @@
+# The whole Sotto stack on one machine (your laptop or the AWS workbench).
+#   task up      → build everything from ../sotto-api and ../sotto-web and start it
+#   open http://localhost:8080
+# Repos must be cloned side by side: sotto-platform/, sotto-api/, sotto-web/.
+name: sotto
+
+x-api-env: &api-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://sotto:sotto@postgres:5432/sotto
+  REDIS_URL: redis://redis:6379
+  RABBITMQ_URL: amqp://sotto:sotto@rabbitmq:5672
+
+services:
+  # ── Gateway: one origin, like production. /api/* → api, everything else → web ──
+  gateway:
+    image: caddy:2-alpine
+    ports: ["8080:80"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on: [web, api]
+
+  web:
+    build: ../../sotto-web
+    environment:
+      API_URL: http://api:4000
+
+  api:
+    build:
+      context: ../../sotto-api
+      args: { APP: api }
+    environment:
+      <<: *api-env
+      PORT: "4000"
+    ports: ["4000:4000"] # direct access for Swagger and debugging
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  # Runs pending migrations once, then exits. The api waits for it to succeed.
+  migrate:
+    build:
+      context: ../../sotto-api
+      args: { APP: api }
+    command: ["sh", "scripts/migrate.sh"]
+    environment:
+      DATABASE_URL: postgresql://sotto:sotto@postgres:5432/sotto
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  worker:
+    build:
+      context: ../../sotto-api
+      args: { APP: worker }
+    environment:
+      <<: *api-env
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+
+  transcriber:
+    build: ../../sotto-api/services/transcriber
+    environment:
+      TRANSCRIBER_ENGINE: fake # labelled mock until Phase 4
+
+  # ── Backing services ──
+  postgres:
+    image: pgvector/pgvector:pg18
+    environment: { POSTGRES_USER: sotto, POSTGRES_PASSWORD: sotto, POSTGRES_DB: sotto }
+    volumes: ["pgdata:/var/lib/postgresql"] # Postgres 18 keeps data under a versioned subfolder
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sotto -d sotto"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:8-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment: { RABBITMQ_DEFAULT_USER: sotto, RABBITMQ_DEFAULT_PASS: sotto }
+    ports: ["15672:15672"] # management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  s3:
+    image: chrislusf/seaweedfs:latest
+    command: server -dir=/data -s3 -s3.port=8333
+    volumes: ["s3data:/data"]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["8025:8025"]
+
+volumes:
+  pgdata:
+  s3data:

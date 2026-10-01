@@ -13,5 +13,5 @@ The owner wants progress visible from Phase 1, develops on AWS (laptop is busy),
 - Secrets live in SSM Parameter Store under `/sotto/demo/`.
 
 ## Consequences
-- About $30/month, with an AWS Budgets alert at $30.
+- About $35/month in eu-west-2 (instance ~$27, disk + public IPv4 ~$6, the rest ~$2), with an AWS Budgets alert at $40. The $200 credit covers roughly five to six months.
 - Postgres runs in a container on the demo box, with a nightly `pg_dump` to S3; not production-grade, which is fine for a demo.

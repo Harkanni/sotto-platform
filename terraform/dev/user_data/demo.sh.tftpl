@@ -1,0 +1,52 @@
+#!/bin/bash
+# First-boot setup for the demo server (Amazon Linux 2023, ARM). Runs once, as root.
+# Everything after this (config, secrets, images) is handled by /opt/sotto/deploy.sh.
+set -euxo pipefail
+
+# Docker Engine from the AL2023 repo, plus the Compose plugin from its official release.
+dnf install -y docker
+systemctl enable --now docker
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL https://github.com/docker/compose/releases/download/v5.5.1/docker-compose-linux-aarch64 \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# 2 GB of swap: a safety net so a memory spike slows the box down instead of killing a service.
+if [ ! -f /swapfile ]; then
+  fallocate -l 2G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+mkdir -p /opt/sotto
+cat > /opt/sotto/instance.env <<EOF
+AWS_REGION=${region}
+CONFIG_BUCKET=${bucket}
+FILES_BUCKET=${bucket}
+ECR_REGISTRY=${ecr_registry}
+EOF
+
+aws s3 cp "s3://${bucket}/demo/deploy.sh" /opt/sotto/deploy.sh --region "${region}"
+chmod +x /opt/sotto/deploy.sh
+
+# Nightly database backup to S3 at 02:30 UTC.
+cat > /etc/systemd/system/sotto-backup.service <<'EOF'
+[Unit]
+Description=Back up the Sotto demo database to S3
+[Service]
+Type=oneshot
+ExecStart=/opt/sotto/backup.sh
+EOF
+cat > /etc/systemd/system/sotto-backup.timer <<'EOF'
+[Unit]
+Description=Nightly Sotto database backup
+[Timer]
+OnCalendar=*-*-* 02:30:00 UTC
+Persistent=true
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable --now sotto-backup.timer
+
+# Sync config, write secrets, start Postgres/Redis/RabbitMQ/Caddy. Apps arrive with the first CI deploy.
+/opt/sotto/deploy.sh bootstrap
