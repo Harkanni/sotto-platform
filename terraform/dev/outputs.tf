@@ -12,7 +12,7 @@ output "workbench_instance_id" {
 
 output "github_variables" {
   description = "Run these once (GitHub CLI) so the repos' images and deploy workflows switch on."
-  value       = join("\n", flatten([for repo in var.github_repos : [
+  value = join("\n", flatten([for repo in var.github_repos : [
     "gh variable set AWS_ROLE_ARN --repo ${var.github_owner}/${repo} --body '${aws_iam_role.github_deploy.arn}'",
     "gh variable set AWS_REGION --repo ${var.github_owner}/${repo} --body '${var.region}'",
     "gh variable set ECR_REGISTRY --repo ${var.github_owner}/${repo} --body '${local.ecr_registry}'",
