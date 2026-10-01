@@ -71,7 +71,7 @@ resource "aws_security_group" "demo" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description      = "HTTP (redirects to HTTPS, and Let's Encrypt challenges)"
+    description      = "HTTP: redirect to HTTPS and ACME challenges"
     from_port        = 80
     to_port          = 80
     protocol         = "tcp"
@@ -95,7 +95,7 @@ resource "aws_security_group" "demo" {
     ipv6_cidr_blocks = ["::/0"]
   }
   egress {
-    description      = "Pull images, reach AWS APIs and Let's Encrypt"
+    description      = "Pull images, reach AWS APIs and Let us Encrypt"
     from_port        = 0
     to_port          = 0
     protocol         = "-1"
