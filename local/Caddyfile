@@ -1,0 +1,12 @@
+# Local gateway. Same routing rule as production: one origin, so the browser never needs CORS.
+:80 {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

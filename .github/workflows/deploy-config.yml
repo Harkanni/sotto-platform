@@ -1,0 +1,46 @@
+name: deploy-config
+
+# When deploy/demo changes on main: upload the files to S3 and tell the demo server to re-sync
+# and restart anything whose config changed. Stays idle until the AWS repo variables are set.
+on:
+  push:
+    branches: [main]
+    paths: ["deploy/demo/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    if: vars.AWS_ROLE_ARN != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Upload deploy files
+        run: |
+          for f in deploy/demo/*; do
+            aws s3 cp "$f" "s3://${{ vars.CONFIG_BUCKET }}/demo/$(basename "$f")" --no-progress
+          done
+      - name: Re-sync the demo server
+        run: |
+          ID=$(aws ssm send-command --document-name sotto-deploy \
+            --targets "Key=tag:sotto-role,Values=demo" \
+            --parameters "tag=bootstrap,services=" \
+            --comment "sotto-platform config ${GITHUB_SHA::7}" \
+            --query Command.CommandId --output text)
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm list-commands --command-id "$ID" --query 'Commands[0].Status' --output text)
+            echo "status: $STATUS"
+            case "$STATUS" in
+              Success) exit 0 ;;
+              Failed|Cancelled|TimedOut) exit 1 ;;
+            esac
+            sleep 10
+          done
+          exit 1

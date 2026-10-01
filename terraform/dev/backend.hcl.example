@@ -1,0 +1,4 @@
+# Copy to backend.hcl (git-ignored) after running terraform/bootstrap, then:
+#   terraform init -backend-config=backend.hcl
+bucket = "sotto-tfstate-<your-account-id>"
+region = "eu-west-2"

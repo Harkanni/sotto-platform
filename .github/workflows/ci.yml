@@ -1,0 +1,86 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # On pull requests from this repo: apply `terraform fmt` and commit it to the PR branch (the
+  # agent that writes most PRs can't download Terraform).
+  sync:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: 1.16.4
+      - run: terraform fmt -recursive terraform
+      - name: Commit formatting
+        run: |
+          git add -A
+          if git diff --cached --quiet; then echo "Formatting is clean."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: terraform fmt"
+          git push
+
+  terraform:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: [bootstrap, dev]
+    defaults:
+      run:
+        working-directory: terraform/${{ matrix.stack }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: 1.16.4
+      - run: terraform fmt -check -diff
+      # Validates syntax and references without AWS credentials or the remote state.
+      - run: terraform init -backend=false -input=false
+      # JSON output → annotations, so errors show inline on the PR's Files tab.
+      - name: terraform validate
+        run: |
+          terraform validate -no-color -json > validate.json || true
+          jq -r '.diagnostics[]? | "::\(.severity) file=terraform/${{ matrix.stack }}/\(.range.filename // "main.tf"),line=\(.range.start.line // 1)::\(.summary): \(.detail // "")"' validate.json
+          jq -e '.valid' validate.json > /dev/null
+
+  scripts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: shellcheck
+        run: docker run --rm -v "$PWD:/mnt" koalaman/shellcheck:v0.11.0 deploy/demo/deploy.sh deploy/demo/backup.sh terraform/dev/user_data/workbench.sh
+      - name: Compose files parse
+        run: |
+          mkdir -p ../sotto-web ../sotto-api/services/transcriber
+          docker compose -f local/compose.yaml config --quiet
+          printf 'ECR_REGISTRY=x\nPOSTGRES_PASSWORD=x\nRABBITMQ_PASSWORD=x\nSITE_ADDRESS=localhost\n' > /tmp/demo.env
+          docker compose -f deploy/demo/compose.yaml --env-file /tmp/demo.env config --quiet
+      - name: Caddyfiles parse
+        run: |
+          docker run --rm -v "$PWD/local/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          docker run --rm -e SITE_ADDRESS=localhost -v "$PWD/deploy/demo/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+  secrets:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: gitleaks
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest dir /repo --redact --verbose

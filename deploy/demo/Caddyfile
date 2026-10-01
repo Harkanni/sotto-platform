@@ -1,0 +1,22 @@
+# Public entry point for the demo. One origin: /api/* → api, everything else → web.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+
+	# Before the first app deploy (or during a restart) show a friendly message, not a 502.
+	handle_errors 502 503 504 {
+		respond "Sotto's demo is starting up. Try again in a minute." 503
+	}
+}

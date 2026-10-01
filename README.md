@@ -22,6 +22,19 @@ I'm building Sotto. Clone harkanni/sotto-platform, sotto-api and sotto-web side 
 Read sotto-platform/CLAUDE.md and sotto-platform/docs/STATUS.md, then continue from "Next step".
 ```
 
+## Run the whole stack
+
+```bash
+task up        # builds ../sotto-api and ../sotto-web, starts everything, waits for health
+open http://localhost:8080
+```
+
+Needs Docker and [Task](https://taskfile.dev). On a busy laptop, run it on the AWS workbench instead (see `terraform/README.md`).
+
+## The always-on demo
+
+Terraform in `terraform/` builds it; `terraform/README.md` has the first-time steps. After that, every merge to `main` in sotto-api or sotto-web builds arm64 images and deploys them automatically.
+
 ## Work on it in VS Code
 
 ```bash

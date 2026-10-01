@@ -1,0 +1,123 @@
+# The always-on demo server's stack (t4g.medium, 4 GB, ARM). Synced from S3 to /opt/sotto by
+# deploy.sh. Image tags come from tags.env (written on each deploy); secrets from SSM via .env.
+# Memory limits keep one runaway service from starving the rest on a small box.
+name: sotto
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://sotto:${POSTGRES_PASSWORD}@postgres:5432/sotto
+  REDIS_URL: redis://redis:6379
+  RABBITMQ_URL: amqp://sotto:${RABBITMQ_PASSWORD}@rabbitmq:5672
+
+x-logging: &logging
+  # Cap log files so a chatty service can't fill the disk.
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  caddy:
+    # Automatic HTTPS (Let's Encrypt). SITE_ADDRESS is <ip>.sslip.io until sotto.ai is bought.
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # certificates — keep them across restarts to avoid rate limits
+      - caddy_config:/config
+    deploy: { resources: { limits: { memory: 64m } } }
+    logging: *logging
+
+  web:
+    image: ${ECR_REGISTRY}/sotto/web:${WEB_TAG:-main}
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:4000
+    deploy: { resources: { limits: { memory: 384m } } }
+    logging: *logging
+
+  api:
+    image: ${ECR_REGISTRY}/sotto/api:${API_TAG:-main}
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      PORT: "4000"
+    depends_on:
+      postgres: { condition: service_healthy }
+    deploy: { resources: { limits: { memory: 512m } } }
+    logging: *logging
+
+  migrate:
+    image: ${ECR_REGISTRY}/sotto/api:${API_TAG:-main}
+    command: ["sh", "scripts/migrate.sh"]
+    environment:
+      DATABASE_URL: postgresql://sotto:${POSTGRES_PASSWORD}@postgres:5432/sotto
+    profiles: ["tools"] # only runs when deploy.sh asks for it
+    logging: *logging
+
+  worker:
+    image: ${ECR_REGISTRY}/sotto/worker:${WORKER_TAG:-main}
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      WORKER_HEALTH_PORT: "4100"
+    deploy: { resources: { limits: { memory: 256m } } }
+    logging: *logging
+
+  transcriber:
+    image: ${ECR_REGISTRY}/sotto/transcriber:${TRANSCRIBER_TAG:-main}
+    restart: unless-stopped
+    environment:
+      TRANSCRIBER_ENGINE: fake # labelled mock until Phase 4
+    deploy: { resources: { limits: { memory: 512m } } }
+    logging: *logging
+
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sotto
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: sotto
+    volumes: ["pgdata:/var/lib/postgresql"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sotto -d sotto"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    deploy: { resources: { limits: { memory: 512m } } }
+    logging: *logging
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "96mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    deploy: { resources: { limits: { memory: 128m } } }
+    logging: *logging
+
+  rabbitmq:
+    image: rabbitmq:4-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: sotto
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes: ["rabbitmq:/var/lib/rabbitmq"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    deploy: { resources: { limits: { memory: 384m } } }
+    logging: *logging
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pgdata:
+  rabbitmq:

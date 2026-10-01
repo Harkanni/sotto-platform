@@ -1,0 +1,60 @@
+# Common commands. Install Task: https://taskfile.dev  (brew install go-task, or see the site)
+version: "3"
+
+vars:
+  COMPOSE: docker compose -f local/compose.yaml
+
+tasks:
+  up:
+    desc: Build and start the whole stack, then wait until every service is healthy
+    cmds:
+      - "{{.COMPOSE}} up -d --build --wait"
+      - echo "Sotto is up → http://localhost:8080  (API docs http://localhost:4000/api/v1/docs)"
+
+  down:
+    desc: Stop the stack (keeps data)
+    cmds: ["{{.COMPOSE}} down"]
+
+  reset:
+    desc: Stop the stack and delete its data volumes
+    prompt: This deletes the local database and files. Continue?
+    cmds: ["{{.COMPOSE}} down -v"]
+
+  ps:
+    desc: Show service status
+    cmds: ["{{.COMPOSE}} ps"]
+
+  logs:
+    desc: Follow logs (task logs -- api)
+    cmds: ["{{.COMPOSE}} logs -f {{.CLI_ARGS}}"]
+
+  tf:bootstrap:
+    desc: One-time — create the S3 bucket that stores Terraform state
+    dir: terraform/bootstrap
+    cmds:
+      - terraform init
+      - terraform apply
+
+  tf:plan:
+    desc: Preview changes to the dev environment (demo + workbench)
+    dir: terraform/dev
+    cmds:
+      - terraform init -backend-config=backend.hcl
+      - terraform plan
+
+  tf:apply:
+    desc: Apply changes to the dev environment
+    dir: terraform/dev
+    cmds:
+      - terraform init -backend-config=backend.hcl
+      - terraform apply
+
+  demo:url:
+    desc: Print the demo URL
+    dir: terraform/dev
+    cmds: ["terraform output -raw demo_url"]
+
+  workbench:start:
+    desc: Start the workbench server (it stops itself after an hour idle)
+    dir: terraform/dev
+    cmds: ['aws ec2 start-instances --instance-ids "$(terraform output -raw workbench_instance_id)"']

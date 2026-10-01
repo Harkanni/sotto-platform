@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+alert_email = "you@example.com"
+
+# Optional
+# workbench_enabled = true
+# domain            = "sotto.ai"   # once bought; the demo moves to demo.sotto.ai
