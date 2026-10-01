@@ -40,6 +40,7 @@ jobs:
   terraform:
     runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         stack: [bootstrap, dev]
     defaults:
@@ -53,7 +54,12 @@ jobs:
       - run: terraform fmt -check -diff
       # Validates syntax and references without AWS credentials or the remote state.
       - run: terraform init -backend=false -input=false
-      - run: terraform validate
+      # JSON output → annotations, so errors show inline on the PR's Files tab.
+      - name: terraform validate
+        run: |
+          terraform validate -no-color -json > validate.json || true
+          jq -r '.diagnostics[]? | "::\(.severity) file=terraform/${{ matrix.stack }}/\(.range.filename // "main.tf"),line=\(.range.start.line // 1)::\(.summary): \(.detail // "")"' validate.json
+          jq -e '.valid' validate.json > /dev/null
 
   scripts:
     runs-on: ubuntu-24.04
