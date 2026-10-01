@@ -1,0 +1,21 @@
+# secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+.terraform.tfstate.lock.info
+# keep the provider lock file
+!.terraform.lock.hcl
+
+# os / editors
+.DS_Store
+.idea/
+*.swp
