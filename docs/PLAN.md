@@ -179,7 +179,7 @@ Development and the demo both run on AWS, so your laptop only needs VS Code, git
 - **Demo chat** goes through a hosted model with your API key, using fictional sample content only. A 4 GB server can't run a decent chat model, and the provider layer makes this a one-line setting.
 - **Private mode** is shown on the workbench, and later on a GPU node.
 - **Both servers are defined in Terraform** in `sotto-platform/terraform/dev`, and GitHub Actions deploys through AWS Systems Manager. No SSH keys and no long-lived AWS keys: that's Level 1 and Level 4 practice from day one.
-- **Budget.** About $30 a month, so the $200 credit lasts roughly six months. An AWS Budgets alert emails you at $30.
+- **Budget.** About $35 a month in London (the instance is about $27; disk and the public IPv4 add about $6). The $200 credit lasts roughly five to six months. An AWS Budgets alert emails you at $40.
 - **Free plan limits.** Free-plan accounts can only use the free-tier [instance types](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-free-tier-usage.html): t3 and t4g micro/small, c7i-flex.large and m7i-flex.large. The plan also ends after six months or when the credits run out. t4g.medium isn't on that list. You have now upgraded to the paid plan, which keeps unused credits for 12 months from sign-up ([AWS](https://aws.amazon.com/blogs/aws/aws-free-tier-update-new-customers-can-get-started-and-explore-aws-with-up-to-200-in-credits)).
 
 ## Data model
@@ -486,6 +486,6 @@ Buy the domain in Phase 1, not at launch. The demo URL, Google and Microsoft sig
 **Still open.** Each has a default I'll use if you don't answer:
 
 1. **Domain.** `sotto.ai` is available but not bought yet. Buy it through Route 53, which has registered `.ai` names [since January 2026](https://aws.amazon.com/about-aws/whats-new/2026/1/amazon-route-53-domains-adds-support-for-.ai-and-other-top-level-domains); check the price and minimum term in the console. Until then, the demo runs at `https://<server-ip>.sslip.io`, which gets a real HTTPS certificate with no domain needed.
-2. **AWS plan and region.** *Done: you've upgraded to the paid plan. Region: London (eu-west-2) unless you say otherwise, with a $30 monthly budget alert.*
+2. **AWS plan and region.** *Done: you've upgraded to the paid plan. Region: London (eu-west-2), with a $40 monthly budget alert.*
 3. **Demo chat model.** Which provider's API key should the demo use (Anthropic, OpenAI or Google)? *Default: whichever key you add first.*
 4. **Meeting bot.** Build the Google Meet bot ourselves (free, good Kubernetes practice), or use a paid hosted meeting-bot API that covers Zoom and Teams sooner? *Default: build it ourselves.*

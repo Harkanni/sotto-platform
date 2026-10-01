@@ -18,11 +18,11 @@
 | --- | --- | --- |
 | sotto-api | `feat/p1-scaffold` → [PR #1](https://github.com/Harkanni/sotto-api/pull/1) | Monorepo, Nest api, worker, transcriber (mock engine), Prisma 7, provider interfaces, CI with real-image smoke test |
 | sotto-web | `feat/p1-scaffold` → [PR #1](https://github.com/Harkanni/sotto-web/pull/1) | Next.js 16 status page, tokens, Playwright (iPhone + desktop), image smoke test |
-| sotto-platform | `feat/p1-stack` → PR #1 | Local full stack (`task up`), demo deploy files, Terraform (bootstrap + dev), deploy-config workflow, learning notes |
+| sotto-platform | `feat/p1-stack` → [PR #1](https://github.com/Harkanni/sotto-platform/pull/1) | Local full stack (`task up`), demo deploy files, Terraform (bootstrap + dev), deploy-config workflow, learning notes |
 
 ## Next step
 
-1. Get CI green on the three Phase 1 PRs, and the owner merges them (api → web → platform).
+1. CI is green on all three Phase 1 PRs. The owner reviews and merges them (api → web → platform).
 2. Owner runs Terraform once (`terraform/README.md` → First-time setup) and sets the GitHub variables it prints.
 3. Re-run `images` on main in sotto-api and sotto-web → the demo URL shows the live status page. **That closes Phase 1.**
 4. Then Phase 2 (design system and app shell) starts on `feat/p2-design-tokens` in sotto-web.
