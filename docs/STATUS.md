@@ -2,35 +2,42 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-01
-**Current phase:** 1 — Scaffold and always-on demo (in progress)
-**Demo URL:** not deployed yet
+**Updated:** 2026-10-02
+**Current phase:** 2 — Design system and app shell (ready for review)
+**Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
 
 ## Done
 
 - Phase 0 — plan approved with the owner's answers. See `docs/PLAN.md` → Decisions.
-- Repos created (private): `harkanni/sotto-platform`, `harkanni/sotto-api`, `harkanni/sotto-web`.
-- Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8 (import signups into `Lead`).
+- Phase 1 — all three scaffold PRs merged; sotto-web's `images` builds, pushes and deploys from
+  `main`. CI authenticates to AWS with an IAM access key (ADR 0007).
+- Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## In progress
 
 | Repo | Branch / PR | What |
 | --- | --- | --- |
-| sotto-api | `feat/p1-scaffold` → [PR #1](https://github.com/Harkanni/sotto-api/pull/1) | Monorepo, Nest api, worker, transcriber (mock engine), Prisma 7, provider interfaces, CI with real-image smoke test |
-| sotto-web | `feat/p1-scaffold` → [PR #1](https://github.com/Harkanni/sotto-web/pull/1) | Next.js 16 status page, tokens, Playwright (iPhone + desktop), image smoke test |
-| sotto-platform | `feat/p1-stack` → [PR #1](https://github.com/Harkanni/sotto-platform/pull/1) | Local full stack (`task up`), demo deploy files, Terraform (bootstrap + dev), deploy-config workflow, learning notes |
+| sotto-web | `feat/p2-design-system` → [PR #2](https://github.com/Harkanni/sotto-web/pull/2) | Design system and app shell: tokens, components with every state, AsyncWidget states, per-tab stacks with compositor push/pop and edge swipe, + sheet, three panes, ⌘K palette, shortcuts, drag-and-drop, offline shell (service worker), iOS launch screens, 46 Storybook stories, unit/e2e/story tests |
+| sotto-platform | `docs/p2-status` → this PR | STATUS, ADR 0007 (access keys), ADR 0008 (client-side stack navigation) |
+
+In `sotto-web`: `PHASE_2_PROGRESS.md` is the detailed log (tests run, results, known issues);
+`UI_DESIGN_SYSTEM.md` documents the design system.
 
 ## Next step
 
-1. CI is green on all three Phase 1 PRs. The owner reviews and merges them (api → web → platform).
-2. Owner runs Terraform once (`terraform/README.md` → First-time setup) and sets the GitHub variables it prints.
-3. Re-run `images` on main in sotto-api and sotto-web → the demo URL shows the live status page. **That closes Phase 1.**
-4. Then Phase 2 (design system and app shell) starts on `feat/p2-design-tokens` in sotto-web.
+1. The owner reviews and merges sotto-web PR #2 (CI green: lint, types, unit, build, e2e on
+   iPhone and desktop, story tests in light and dark, image smoke test, secrets scan), then this
+   PR.
+2. Phase 3 (accounts and workspaces) starts on `feat/p3-…` in sotto-api and sotto-web.
 
 ## Blockers and things the owner must do
 
 - [ ] Buy `sotto.ai` (available, not bought). Until then the demo uses `https://<ip>.sslip.io`.
-- [ ] After the platform PR merges: run Terraform once from your machine or CloudShell (steps in `terraform/README.md`), then run the `gh variable set` commands it prints.
+- [ ] sotto-api `images` on `main` (2026-10-02 07:32) failed: ECR repository `sotto/worker` does
+      not exist in the registry. `terraform/dev/main.tf` lists it, so re-running
+      `terraform apply` in `terraform/dev` should create it; then re-run `images`.
+- [ ] ADR 0007 follow-ups: `deploy-config.yml` still uses the OIDC role; the OIDC Terraform is
+      now unused.
 
 ## Open decisions
 
