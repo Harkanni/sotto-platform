@@ -15,8 +15,8 @@ output "github_secrets" {
   
   value = join("\n", flatten([
     for repo in var.github_repos : [
-      "gh secret set AWS_ACCESS_KEY_ID --repo ${var.github_owner}/${repo} --body '<AWS_ACCESS_KEY_ID>'",
-      "gh secret set AWS_SECRET_ACCESS_KEY --repo ${var.github_owner}/${repo} --body '<AWS_SECRET_ACCESS_KEY>'",
+      "gh secret set AWS_ACCESS_KEY_ID --repo ${var.github_owner}/${repo} --body '${var.aws_access_key_id}'",
+      "gh secret set AWS_SECRET_ACCESS_KEY --repo ${var.github_owner}/${repo} --body '${var.aws_secret_access_key}'",
       "gh secret set AWS_REGION --repo ${var.github_owner}/${repo} --body '${var.region}'",
       "gh secret set ECR_REGISTRY --repo ${var.github_owner}/${repo} --body '${local.ecr_registry}'",
       "gh secret set CONFIG_BUCKET --repo ${var.github_owner}/${repo} --body '${aws_s3_bucket.dev.bucket}'",
