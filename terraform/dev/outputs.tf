@@ -10,14 +10,17 @@ output "workbench_instance_id" {
   value = var.workbench_enabled ? aws_instance.workbench[0].id : ""
 }
 
-output "github_variables" {
-  description = "Run these once (GitHub CLI) so the repos' images and deploy workflows switch on."
-  value = join("\n", flatten([for repo in var.github_repos : [
-    "gh variable set AWS_ROLE_ARN --repo ${var.github_owner}/${repo} --body '${aws_iam_role.github_deploy.arn}'",
-    "gh variable set AWS_REGION --repo ${var.github_owner}/${repo} --body '${var.region}'",
-    "gh variable set ECR_REGISTRY --repo ${var.github_owner}/${repo} --body '${local.ecr_registry}'",
-    "gh variable set CONFIG_BUCKET --repo ${var.github_owner}/${repo} --body '${aws_s3_bucket.dev.bucket}'",
-  ]]))
+output "github_secrets" {
+  description = "Run these once (GitHub CLI) to configure AWS credentials and deployment settings for the repos."
+  value = join("\n", flatten([
+    for repo in var.github_repos : [
+      "gh secret set AWS_ACCESS_KEY_ID --repo ${var.github_owner}/${repo} --body '<AWS_ACCESS_KEY_ID>'",
+      "gh secret set AWS_SECRET_ACCESS_KEY --repo ${var.github_owner}/${repo} --body '<AWS_SECRET_ACCESS_KEY>'",
+      "gh secret set AWS_REGION --repo ${var.github_owner}/${repo} --body '${var.region}'",
+      "gh secret set ECR_REGISTRY --repo ${var.github_owner}/${repo} --body '${local.ecr_registry}'",
+      "gh secret set CONFIG_BUCKET --repo ${var.github_owner}/${repo} --body '${aws_s3_bucket.dev.bucket}'",
+    ]
+  ]))
 }
 
 output "shell" {
