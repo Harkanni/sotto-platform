@@ -16,9 +16,20 @@ variable "github_repos" {
   default     = ["sotto-web", "sotto-api", "sotto-platform"]
 }
 
+variable "aws_access_key_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "aws_secret_access_key" {
+  type      = string
+  sensitive = true
+}
+
 variable "alert_email" {
   description = "Where AWS Budgets sends cost alerts. Set it in terraform.tfvars."
   type        = string
+  default     = "sendaraven2@gmail.com"
 }
 
 variable "monthly_budget_usd" {
