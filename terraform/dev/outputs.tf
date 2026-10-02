@@ -12,8 +12,8 @@ output "workbench_instance_id" {
 
 output "github_secrets" {
   description = "Run these once (GitHub CLI) to configure AWS credentials and deployment settings for the repos."
-  sensitive   = true
-  
+  sensitive   = false
+
   value = join("\n", flatten([
     for repo in var.github_repos : [
       "gh secret set AWS_ACCESS_KEY_ID --repo ${var.github_owner}/${repo} --body '${var.aws_access_key_id}'",
