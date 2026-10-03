@@ -2,7 +2,7 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-02
+**Updated:** 2026-10-03
 **Current phase:** 3 — Accounts and workspaces (in progress)
 **Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
 
@@ -20,29 +20,48 @@
 
 | Repo           | Branch / PR                                                                           | What                                                                 |
 | -------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| sotto-api      | `feat/p3-accounts` → [PR #3](https://github.com/Harkanni/sotto-api/pull/3) (draft)    | Better Auth, workspaces, members, invites, roles, collections, audit |
-| sotto-web      | `feat/p3-accounts` → [PR #3](https://github.com/Harkanni/sotto-web/pull/3) (draft)    | Sign-in, onboarding, invites, Profile admin screens, access sheet    |
-| sotto-platform | `docs/p3-status` → this PR                                                            | STATUS, permanent CLAUDE.md, ADRs, demo config for auth email        |
+| sotto-api      | `feat/p3-accounts` → [PR #3](https://github.com/Harkanni/sotto-api/pull/3) — CI green | Better Auth, workspaces, members, invites, roles, collections, audit |
+| sotto-web      | `feat/p3-accounts` → [PR #3](https://github.com/Harkanni/sotto-web/pull/3)            | Sign-in, onboarding, invites, Profile, collections with access, E2E  |
+| sotto-platform | `docs/p3-status` → this PR                                                            | STATUS, CLAUDE.md, ADRs 0009–0015, demo auth + mailbox config        |
+
+Phase 3 state: milestones M0–M6 done; M7 (done-when E2E, CI job, demo config, ADRs) written and
+passing locally on iPhone and desktop. What's left is merging in order (below) so the web PR's
+`accounts` job can run against the new API image.
 
 The detailed log for the phase is `sotto-web/PHASE_3_PROGRESS.md` (on `feat/p3-accounts`):
 requirements, milestones, decisions, missing specifications, tests run.
 
 ## Next step
 
-Continue Phase 3 from the first unfinished milestone in `sotto-web/PHASE_3_PROGRESS.md`.
-Merge order when ready: this PR (and `terraform apply` for the new demo secrets) → sotto-api#3 →
-sotto-web#3.
+Owner, in this order:
+
+1. Review ADR 0015 (the demo's mailbox) and merge this PR; run `terraform apply` in
+   `terraform/dev`. It creates the demo's `AUTH_SECRET` and mailbox password in SSM, and the
+   missing ECR repository `sotto/worker`.
+2. Merge sotto-api#3. Its `images` workflow then publishes `sotto/api:main` with Phase 3 and
+   deploys the demo (the API migrates on deploy).
+3. Re-run sotto-web#3's CI: the `accounts` job pulls that image and runs the done-when E2E.
+   Merge when green; `images` deploys the web.
+4. On the demo: sign in at the demo URL; the link arrives at `<demo>/mail/` (user `sotto`,
+   `terraform output -raw demo_mail_password`).
+
+An agent session continues with whatever the phase log's **Next steps** says (after merging:
+Phase 4).
 
 ## Blockers and things the owner must do
 
 - [ ] Buy `sotto.ai` (available, not bought). Until then the demo uses `https://<ip>.sslip.io`.
 - [ ] Phase 3: create the Google and Microsoft OAuth apps (steps in the Phase 3 PR); until then
       those buttons stay hidden.
-- [ ] Phase 3: approve how the demo sends email before the domain exists (proposal: Mailpit on
-      the demo server behind a password; SES once the domain is verified).
+- [ ] Phase 3: approve how the demo sends email before the domain exists: ADR 0015 (Mailpit at
+      `/mail/` behind a password; SES once the domain is verified), then `terraform apply`.
+- [ ] This PR's CI shows "action required": approve the workflow run in the Actions tab.
+- [ ] Check: `terraform output github_secrets` prints `gh secret set` for `AWS_REGION` and
+      `ECR_REGISTRY`, but the workflows read them as **variables** (`vars.`). They work today
+      (the variables are set); keep both in sync if you rotate anything.
 - [ ] sotto-api `images` on `main` (2026-10-02 07:32) failed: ECR repository `sotto/worker` did not
-      exist. `terraform/dev` defines it (`local.services`), so re-running `terraform apply` there
-      should create it; then re-run `images`.
+      exist (and fail-fast cancelled the api build). `terraform/dev` defines it
+      (`local.services`), so `terraform apply` (step 1 above) creates it.
 - [ ] ADR 0007 follow-up: the OIDC Terraform (`terraform/dev/github_oidc.tf`) is unused now.
 
 ## Open decisions

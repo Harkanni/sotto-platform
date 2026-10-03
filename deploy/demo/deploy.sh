@@ -44,7 +44,7 @@ aws ecr get-login-password --region "$AWS_REGION" |
   docker login --username AWS --password-stdin "$ECR_REGISTRY" > /dev/null
 
 log "starting backing services"
-docker compose up -d --wait postgres redis rabbitmq caddy
+docker compose up -d --wait postgres redis rabbitmq mailpit caddy
 # The Caddyfile is a bind mount: pick up edits without dropping connections.
 docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile || true
 

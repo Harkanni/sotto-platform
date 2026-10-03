@@ -29,3 +29,14 @@ output "shell" {
   description = "Open a shell on the demo server (needs the Session Manager plugin for the AWS CLI)."
   value       = "aws ssm start-session --region ${var.region} --target ${aws_instance.demo.id}"
 }
+
+output "demo_mail_url" {
+  description = "Where the demo's emails land until SES is set up (user: sotto)"
+  value       = "https://${local.site_address}/mail/"
+}
+
+output "demo_mail_password" {
+  description = "Password for the demo's mailbox (terraform output -raw demo_mail_password)"
+  value       = random_password.mailpit.result
+  sensitive   = true
+}
