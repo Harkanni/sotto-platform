@@ -71,7 +71,7 @@ jobs:
         run: |
           mkdir -p ../sotto-web ../sotto-api/services/transcriber
           docker compose -f local/compose.yaml config --quiet
-          printf 'ECR_REGISTRY=x\nPOSTGRES_PASSWORD=x\nRABBITMQ_PASSWORD=x\nSITE_ADDRESS=localhost\n' > /tmp/demo.env
+          printf 'ECR_REGISTRY=x\nPOSTGRES_PASSWORD=x\nRABBITMQ_PASSWORD=x\nSITE_ADDRESS=localhost\nAUTH_SECRET=x\nMAILPIT_PASSWORD=x\n' > /tmp/demo.env
           docker compose -f deploy/demo/compose.yaml --env-file /tmp/demo.env config --quiet
       - name: Caddyfiles parse
         run: |

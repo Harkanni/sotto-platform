@@ -11,6 +11,12 @@
 		reverse_proxy api:4000
 	}
 
+	# The demo's mailbox (Mailpit, password-protected) until SES is set up.
+	redir /mail /mail/
+	handle /mail/* {
+		reverse_proxy mailpit:8025
+	}
+
 	handle {
 		reverse_proxy web:3000
 	}

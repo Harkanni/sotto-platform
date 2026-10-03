@@ -8,6 +8,8 @@ x-app-env: &app-env
   DATABASE_URL: postgresql://sotto:${POSTGRES_PASSWORD}@postgres:5432/sotto
   REDIS_URL: redis://redis:6379
   RABBITMQ_URL: amqp://sotto:${RABBITMQ_PASSWORD}@rabbitmq:5672
+  # The origin people open: sign-in links, invites and passkeys belong to it.
+  APP_URL: https://${SITE_ADDRESS}
 
 x-logging: &logging
   # Cap log files so a chatty service can't fill the disk.
@@ -43,6 +45,15 @@ services:
     environment:
       <<: *app-env
       PORT: "4000"
+      AUTH_SECRET: ${AUTH_SECRET}
+      # Mailpit until SES (ADR 0015): switch SMTP_URL to SES's SMTP endpoint once sotto.ai exists.
+      SMTP_URL: smtp://mailpit:1025
+      MAIL_FROM: Sotto <no-reply@${SITE_ADDRESS}>
+      # Google and Microsoft buttons appear once these SSM parameters exist (/sotto/demo/...).
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
     depends_on:
       postgres: { condition: service_healthy }
     deploy: { resources: { limits: { memory: 512m } } }
@@ -71,6 +82,18 @@ services:
     environment:
       TRANSCRIBER_ENGINE: fake # labelled mock until Phase 4
     deploy: { resources: { limits: { memory: 512m } } }
+    logging: *logging
+
+  # The demo's mailbox (ADR 0015): catches every email the api sends; read it at /mail/ with the
+  # password from `terraform output -raw demo_mail_password`. Nothing leaves the server.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    environment:
+      MP_WEBROOT: /mail/
+      MP_UI_AUTH: sotto:${MAILPIT_PASSWORD}
+      MP_MAX_MESSAGES: "500"
+    deploy: { resources: { limits: { memory: 64m } } }
     logging: *logging
 
   postgres:

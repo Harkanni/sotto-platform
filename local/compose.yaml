@@ -9,6 +9,11 @@ x-api-env: &api-env
   DATABASE_URL: postgresql://sotto:sotto@postgres:5432/sotto
   REDIS_URL: redis://redis:6379
   RABBITMQ_URL: amqp://sotto:sotto@rabbitmq:5672
+  # Phase 3 sign-in. The secret is for this machine only (production mode requires one); the
+  # demo's comes from SSM. Sign-in links land in Mailpit: http://localhost:8025.
+  APP_URL: http://localhost:8080
+  AUTH_SECRET: local-compose-only-secret-never-used-on-a-server
+  SMTP_URL: smtp://mailpit:1025
 
 services:
   # ── Gateway: one origin, like production. /api/* → api, everything else → web ──

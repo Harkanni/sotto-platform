@@ -13,7 +13,7 @@ output "workbench_instance_id" {
 output "github_secrets" {
   description = "Run these once (GitHub CLI) to configure AWS credentials and deployment settings for the repos."
   sensitive   = true
-  
+
   value = join("\n", flatten([
     for repo in var.github_repos : [
       "gh secret set AWS_ACCESS_KEY_ID --repo ${var.github_owner}/${repo} --body '${var.aws_access_key_id}'",
@@ -28,4 +28,15 @@ output "github_secrets" {
 output "shell" {
   description = "Open a shell on the demo server (needs the Session Manager plugin for the AWS CLI)."
   value       = "aws ssm start-session --region ${var.region} --target ${aws_instance.demo.id}"
+}
+
+output "demo_mail_url" {
+  description = "Where the demo's emails land until SES is set up (user: sotto)"
+  value       = "https://${local.site_address}/mail/"
+}
+
+output "demo_mail_password" {
+  description = "Password for the demo's mailbox (terraform output -raw demo_mail_password)"
+  value       = random_password.mailpit.result
+  sensitive   = true
 }

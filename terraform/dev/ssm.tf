@@ -24,6 +24,32 @@ resource "aws_ssm_parameter" "rabbitmq_password" {
   value = random_password.rabbitmq.result
 }
 
+# Phase 3: signs sessions and CSRF tokens (sotto-api requires 32+ characters in production).
+resource "random_password" "auth_secret" {
+  length  = 48
+  special = false
+}
+
+resource "aws_ssm_parameter" "auth_secret" {
+  name  = "/sotto/demo/AUTH_SECRET"
+  type  = "SecureString"
+  value = random_password.auth_secret.result
+}
+
+# Phase 3: until sotto.ai exists (and SES with it), the demo's sign-in links and invites land in
+# Mailpit on the server, behind this password (ADR 0015). `terraform output -raw
+# demo_mail_password` shows it.
+resource "random_password" "mailpit" {
+  length  = 24
+  special = false # used inside MP_UI_AUTH ("user:password")
+}
+
+resource "aws_ssm_parameter" "mailpit_password" {
+  name  = "/sotto/demo/MAILPIT_PASSWORD"
+  type  = "SecureString"
+  value = random_password.mailpit.result
+}
+
 resource "aws_ssm_parameter" "site_address" {
   name  = "/sotto/demo/SITE_ADDRESS"
   type  = "String"
