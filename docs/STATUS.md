@@ -59,9 +59,10 @@ Phase 4).
 - [ ] Check: `terraform output github_secrets` prints `gh secret set` for `AWS_REGION` and
       `ECR_REGISTRY`, but the workflows read them as **variables** (`vars.`). They work today
       (the variables are set); keep both in sync if you rotate anything.
-- [ ] sotto-api `images` on `main` (2026-10-02 07:32) failed: ECR repository `sotto/worker` did not
-      exist (and fail-fast cancelled the api build). `terraform/dev` defines it
-      (`local.services`), so `terraform apply` (step 1 above) creates it.
+- [ ] ECR is missing repositories: sotto-api `images` on `main` (2026-10-02 07:32) failed on
+      `sotto/worker`, and on 2026-10-03 sotto-web's `accounts` job found no `sotto/api` in the
+      registry its `ECR_REGISTRY` points to. `terraform/dev/ecr.tf` defines all four
+      (`local.services`), so `terraform apply` (step 1 above) creates them in that account.
 - [ ] ADR 0007 follow-up: the OIDC Terraform (`terraform/dev/github_oidc.tf`) is unused now.
 
 ## Open decisions
