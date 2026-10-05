@@ -37,6 +37,32 @@ resource "aws_s3_bucket_lifecycle_configuration" "dev" {
       days = 14
     }
   }
+  # Uploads abandoned half-way leave invisible parts that S3 still bills for. Sotto cancels
+  # them itself when it can; this sweeps up whatever is left (a closed laptop, a crash).
+  rule {
+    id     = "abort-abandoned-uploads"
+    status = "Enabled"
+    filter {
+      prefix = "files/"
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
+# Browsers upload and play files straight from S3 with presigned URLs (Phase 4), so the bucket
+# must allow the demo's origin. ETag is exposed because the browser sends each part's ETag back
+# to finish an upload; Range lets the player seek inside a recording.
+resource "aws_s3_bucket_cors_configuration" "dev" {
+  bucket = aws_s3_bucket.dev.id
+  cors_rule {
+    allowed_methods = ["GET", "PUT", "HEAD"]
+    allowed_origins = ["https://${local.site_address}"]
+    allowed_headers = ["Content-Type", "Range"]
+    expose_headers  = ["ETag", "Content-Length", "Content-Range", "Accept-Ranges"]
+    max_age_seconds = 3600
+  }
 }
 
 # Upload the demo deploy files. Editing a file in deploy/demo and re-applying (or merging to

@@ -11,6 +11,13 @@ x-app-env: &app-env
   # The origin people open: sign-in links, invites and passkeys belong to it.
   APP_URL: https://${SITE_ADDRESS}
 
+# Object storage (Phase 4): the dev bucket's files/ prefix on S3. No endpoint or keys: the
+# server's IAM role signs every request, and browsers upload to S3 directly with presigned URLs
+# (the bucket's CORS rule allows this site; terraform/dev/storage.tf).
+x-storage-env: &storage-env
+  S3_BUCKET: ${FILES_BUCKET}
+  S3_REGION: ${AWS_REGION}
+
 x-logging: &logging
   # Cap log files so a chatty service can't fill the disk.
   driver: json-file
@@ -43,7 +50,7 @@ services:
     image: ${ECR_REGISTRY}/sotto/api:${API_TAG:-main}
     restart: unless-stopped
     environment:
-      <<: *app-env
+      <<: [*app-env, *storage-env]
       PORT: "4000"
       AUTH_SECRET: ${AUTH_SECRET}
       # Mailpit until SES (ADR 0015): switch SMTP_URL to SES's SMTP endpoint once sotto.ai exists.
@@ -67,20 +74,30 @@ services:
     profiles: ["tools"] # only runs when deploy.sh asks for it
     logging: *logging
 
+  # LABELLED MOCKS on the demo, until the owner decides its capacity (STATUS, Phase 4): this
+  # 4 GB server has no room for Ollama and Whisper beside everything else. Uploads, reading
+  # PDFs, the pipeline, the player and the transcript all run for real; embeddings are a
+  # hash-based mock and transcripts are placeholder lines, both labelled in the app. To go
+  # real: a bigger instance, then AI_EMBEDDINGS=ollama:nomic-embed-text with an ollama service,
+  # and TRANSCRIBER_ENGINE=faster-whisper with a /models volume (see local/compose.yaml).
   worker:
     image: ${ECR_REGISTRY}/sotto/worker:${WORKER_TAG:-main}
     restart: unless-stopped
     environment:
-      <<: *app-env
+      <<: [*app-env, *storage-env]
       WORKER_HEALTH_PORT: "4100"
-    deploy: { resources: { limits: { memory: 256m } } }
+      WORKER_CONCURRENCY: "1" # one job at a time on a small box
+      AI_EMBEDDINGS: fake:fake-hash
+    deploy: { resources: { limits: { memory: 384m } } }
     logging: *logging
 
   transcriber:
     image: ${ECR_REGISTRY}/sotto/transcriber:${TRANSCRIBER_TAG:-main}
     restart: unless-stopped
     environment:
-      TRANSCRIBER_ENGINE: fake # labelled mock until Phase 4
+      <<: *storage-env
+      RABBITMQ_URL: amqp://sotto:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      TRANSCRIBER_ENGINE: fake
     deploy: { resources: { limits: { memory: 512m } } }
     logging: *logging
 

@@ -44,8 +44,12 @@ data "aws_iam_policy_document" "server" {
     resources = ["${aws_s3_bucket.dev.arn}/backups/*"]
   }
   statement {
-    sid       = "AppFiles"
-    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload"]
+    sid = "AppFiles"
+    # ListMultipartUploadParts lets an interrupted upload resume where it stopped (Phase 4).
+    actions = [
+      "s3:GetObject", "s3:PutObject", "s3:DeleteObject",
+      "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts",
+    ]
     resources = ["${aws_s3_bucket.dev.arn}/files/*"]
   }
   statement {
