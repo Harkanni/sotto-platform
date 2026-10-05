@@ -6,6 +6,12 @@
 		reverse_proxy api:4000
 	}
 
+	# Browser uploads and playback go straight to storage, on this same origin (no CORS).
+	# handle_path strips /s3 so SeaweedFS sees /<bucket>/<key>.
+	handle_path /s3/* {
+		reverse_proxy s3:8333
+	}
+
 	handle {
 		reverse_proxy web:3000
 	}

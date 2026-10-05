@@ -2,7 +2,7 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-03
+**Updated:** 2026-10-05
 **Current phase:** 4 — Ingestion and meetings (in progress)
 **Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
 
@@ -25,13 +25,20 @@
 | sotto-web      | `feat/p4-ingestion` → [PR #4](https://github.com/Harkanni/sotto-web/pull/4) (draft)        | Uploads, recording, Docs and Meetings on real files, player, transcript |
 | sotto-platform | `docs/p4-status` → this PR (draft)                                                         | STATUS, ADRs, Compose (storage, models), demo config                    |
 
-Phase 4 state: M0 (plan) and M1 (schema, migration, storage module, contracts) done. The
-detailed log is `sotto-web/PHASE_4_PROGRESS.md` on `feat/p4-ingestion`: requirements,
-milestones, decisions, missing specifications, tests run.
+Phase 4 state: M0–M8 done (schema, uploads and files API, worker pipeline, transcriber with
+faster-whisper, meetings API, live status, web uploads/recording, Docs and Meetings on real
+files, player and transcript). M9 (hardening) in progress: this PR now carries the local
+Compose stack for ingestion (S3 bucket init, Ollama embeddings, faster-whisper transcriber,
+`/s3/*` through Caddy), the demo config (storage env; labelled mock engines), the Terraform for
+browser uploads (bucket CORS, `ListMultipartUploadParts`, abandoned-upload lifecycle) and ADRs
+0016–0017. The detailed log is `sotto-web/PHASE_4_PROGRESS.md` on `feat/p4-ingestion`.
+
+**Merge order:** sotto-api#4 → `terraform apply` (below) → sotto-web#4 → this PR.
 
 ## Next step
 
-An agent session continues with the phase log's **Next steps** (M2: uploads and files API).
+An agent session continues with the phase log's **Next steps** (M9: the sotto-api `ingestion`
+CI job end to end, design-system docs and stories for the new components, `pnpm smoothness`).
 
 ## Blockers and things the owner must do
 
@@ -40,6 +47,11 @@ An agent session continues with the phase log's **Next steps** (M2: uploads and 
       those buttons stay hidden.
 - [ ] Phase 3: if not done yet, `terraform apply` in `terraform/dev` (demo `AUTH_SECRET`, the
       mailbox password, ECR repositories `sotto/api` and `sotto/worker`).
+- [ ] Phase 4: `terraform apply` in `terraform/dev` after sotto-api#4 merges. It adds the files
+      bucket's CORS rule (browser uploads from the demo origin), `s3:ListMultipartUploadParts`
+      for the app role (resuming uploads) and a 7-day rule that aborts abandoned uploads. Check
+      with `terraform plan` first: it should only add/change those three, plus any ECR
+      repositories still missing.
 - [ ] Phase 4 decision: the demo server (t4g.medium, 4 GB) has no room for a local chat model
       and is tight for real transcription + embeddings (see the phase log, "Missing
       specifications" 3–4). Default until you decide: labelled mock engines on the demo, real

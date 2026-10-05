@@ -15,6 +15,17 @@ x-api-env: &api-env
   AUTH_SECRET: local-compose-only-secret-never-used-on-a-server
   SMTP_URL: smtp://mailpit:1025
 
+# Object storage (Phase 4). Services reach SeaweedFS directly; browsers upload through the
+# gateway's /s3/ path, so presigned URLs are signed for that address and need no CORS. Local
+# SeaweedFS runs without accounts, so the keys are placeholders the SDK insists on.
+x-storage-env: &storage-env
+  S3_ENDPOINT: http://s3:8333
+  S3_PUBLIC_ENDPOINT: http://localhost:8080/s3
+  S3_BUCKET: sotto-files
+  S3_FORCE_PATH_STYLE: "true"
+  S3_ACCESS_KEY_ID: local
+  S3_SECRET_ACCESS_KEY: local
+
 services:
   # ── Gateway: one origin, like production. /api/* → api, everything else → web ──
   gateway:
@@ -34,13 +45,14 @@ services:
       context: ../../sotto-api
       args: { APP: api }
     environment:
-      <<: *api-env
+      <<: [*api-env, *storage-env]
       PORT: "4000"
     ports: ["4000:4000"] # direct access for Swagger and debugging
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      s3-init: { condition: service_completed_successfully }
 
   # Runs pending migrations once, then exits. The api waits for it to succeed.
   migrate:
@@ -53,19 +65,53 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
 
+  # Extracts text, chunks it and embeds it (Ollama, in this stack); writes meeting notes.
   worker:
     build:
       context: ../../sotto-api
       args: { APP: worker }
     environment:
-      <<: *api-env
+      <<: [*api-env, *storage-env]
+      AI_EMBEDDINGS: ollama:nomic-embed-text
+      OLLAMA_URL: http://ollama:11434
+      # Meeting notes from a private model: uncomment after `docker compose exec ollama ollama
+      # pull llama3.2:3b` (needs ~3 GB RAM). Without it, notes are labelled "basic notes".
+      # AI_PRIVATE_CHAT: ollama:llama3.2:3b
     depends_on:
       rabbitmq: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+      ollama-pull: { condition: service_completed_successfully }
 
+  # Real transcription: ffmpeg + faster-whisper. `base` is a good laptop default; `small` is
+  # more accurate and slower. The model downloads once into the models volume.
   transcriber:
     build: ../../sotto-api/services/transcriber
     environment:
-      TRANSCRIBER_ENGINE: fake # labelled mock until Phase 4
+      <<: *storage-env
+      RABBITMQ_URL: amqp://sotto:sotto@rabbitmq:5672
+      TRANSCRIBER_ENGINE: faster-whisper
+      WHISPER_MODEL: base
+    volumes: ["models:/models"]
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+
+  # Embeddings run here, in your stack: nothing leaves the machine.
+  ollama:
+    image: ollama/ollama:latest
+    volumes: ["ollama:/root/.ollama"]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # One-shot: downloads the embedding model (~270 MB) the first time, then exits.
+  ollama-pull:
+    image: ollama/ollama:latest
+    environment: { OLLAMA_HOST: http://ollama:11434 }
+    entrypoint: ["ollama", "pull", "nomic-embed-text"]
+    depends_on:
+      ollama: { condition: service_healthy }
 
   # ── Backing services ──
   postgres:
@@ -100,6 +146,13 @@ services:
     image: chrislusf/seaweedfs:latest
     command: server -dir=/data -s3 -s3.port=8333
     volumes: ["s3data:/data"]
+    ports: ["8333:8333"] # for debugging with any S3 client
+
+  # One-shot: creates the files bucket (an S3 PUT on the bucket; repeating it is harmless).
+  s3-init:
+    image: curlimages/curl:latest
+    command: ["sh", "-c", "until curl -fs -o /dev/null -X PUT http://s3:8333/sotto-files; do sleep 1; done"]
+    depends_on: [s3]
 
   mailpit:
     image: axllent/mailpit:latest
@@ -108,3 +161,5 @@ services:
 volumes:
   pgdata:
   s3data:
+  models: # Whisper models, downloaded once
+  ollama: # embedding (and optional chat) models
