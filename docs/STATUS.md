@@ -21,24 +21,25 @@
 
 | Repo           | Branch / PR                                                                               | What                                                                    |
 | -------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| sotto-api      | `feat/p4-ingestion` → [PR #4](https://github.com/Harkanni/sotto-api/pull/4) (draft)        | Uploads, files API, worker pipeline, transcriber, meetings, live status |
-| sotto-web      | `feat/p4-ingestion` → [PR #4](https://github.com/Harkanni/sotto-web/pull/4) (draft)        | Uploads, recording, Docs and Meetings on real files, player, transcript |
-| sotto-platform | `docs/p4-status` → this PR (draft)                                                         | STATUS, ADRs, Compose (storage, models), demo config                    |
+| sotto-api      | `feat/p4-ingestion` → [PR #4](https://github.com/Harkanni/sotto-api/pull/4)                | Uploads, files API, worker pipeline, transcriber, meetings, live status |
+| sotto-web      | `feat/p4-ingestion` → [PR #4](https://github.com/Harkanni/sotto-web/pull/4)                | Uploads, recording, Docs and Meetings on real files, player, transcript |
+| sotto-platform | `docs/p4-status` → this PR                                                                 | STATUS, ADRs, Compose (storage, models), demo config                    |
 
-Phase 4 state: M0–M8 done (schema, uploads and files API, worker pipeline, transcriber with
-faster-whisper, meetings API, live status, web uploads/recording, Docs and Meetings on real
-files, player and transcript). M9 (hardening) in progress: this PR now carries the local
-Compose stack for ingestion (S3 bucket init, Ollama embeddings, faster-whisper transcriber,
-`/s3/*` through Caddy), the demo config (storage env; labelled mock engines), the Terraform for
-browser uploads (bucket CORS, `ListMultipartUploadParts`, abandoned-upload lifecycle) and ADRs
-0016–0017. The detailed log is `sotto-web/PHASE_4_PROGRESS.md` on `feat/p4-ingestion`.
+Phase 4 state: **complete, ready for review.** M0–M9 done: uploads and the files API, the
+worker pipeline, the transcriber (faster-whisper), meetings, live status, web uploads and
+recording, Docs and Meetings on real files, player and transcript. Done-when verified in
+sotto-api's `ingestion` CI job: a 3-page PDF and a 30-minute recording go through the real
+images (RabbitMQ, worker, faster-whisper, pgvector, S3) and reach Ready with correct pages and
+timestamps. This PR carries the local Compose stack for ingestion, the demo config (labelled
+mock engines), the Terraform for browser uploads and ADRs 0016–0017. The detailed log is
+`sotto-web/PHASE_4_PROGRESS.md` on `feat/p4-ingestion`.
 
 **Merge order:** sotto-api#4 → `terraform apply` (below) → sotto-web#4 → this PR.
 
 ## Next step
 
-An agent session continues with the phase log's **Next steps** (M9: the sotto-api `ingestion`
-CI job end to end, design-system docs and stories for the new components, `pnpm smoothness`).
+The owner reviews and merges Phase 4 in the merge order above. Then an agent session starts
+Phase 5 (Ask and search) from `docs/PLAN.md`, creating `sotto-web/PHASE_5_PROGRESS.md`.
 
 ## Blockers and things the owner must do
 
