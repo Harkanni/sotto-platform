@@ -2,7 +2,7 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-05
+**Updated:** 2026-10-07
 **Current phase:** 4 — Ingestion and meetings (in progress)
 **Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
 
@@ -21,24 +21,26 @@
 
 | Repo           | Branch / PR                                                                               | What                                                                    |
 | -------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| sotto-api      | `feat/p4-ingestion` → [PR #4](https://github.com/Harkanni/sotto-api/pull/4)                | Uploads, files API, worker pipeline, transcriber, meetings, live status |
 | sotto-web      | `feat/p4-ingestion` → [PR #4](https://github.com/Harkanni/sotto-web/pull/4)                | Uploads, recording, Docs and Meetings on real files, player, transcript |
-| sotto-platform | `docs/p4-status` → this PR                                                                 | STATUS, ADRs, Compose (storage, models), demo config                    |
+| sotto-platform | `docs/p4-accounts-ci` → this PR                                                            | STATUS after sotto-web's `accounts` job fix                             |
 
-Phase 4 state: **complete, ready for review.** M0–M9 done: uploads and the files API, the
+Phase 4 state: **complete; sotto-api#4 and sotto-platform#4 are merged, sotto-web#4 is
+ready to merge** (all checks green). Its `accounts` job ran for the first time once ECR had
+`sotto/api`, and failed: since Phase 4, sample content creates real files, so the job's API
+now gets SeaweedFS and RabbitMQ. M0–M9 done: uploads and the files API, the
 worker pipeline, the transcriber (faster-whisper), meetings, live status, web uploads and
 recording, Docs and Meetings on real files, player and transcript. Done-when verified in
 sotto-api's `ingestion` CI job: a 3-page PDF and a 30-minute recording go through the real
 images (RabbitMQ, worker, faster-whisper, pgvector, S3) and reach Ready with correct pages and
-timestamps. This PR carries the local Compose stack for ingestion, the demo config (labelled
+timestamps. sotto-platform#4 brought the local Compose stack for ingestion, the demo config (labelled
 mock engines), the Terraform for browser uploads and ADRs 0016–0017. The detailed log is
 `sotto-web/PHASE_4_PROGRESS.md` on `feat/p4-ingestion`.
 
-**Merge order:** sotto-api#4 → `terraform apply` (below) → sotto-web#4 → this PR.
+**Merge order:** sotto-web#4, then this PR.
 
 ## Next step
 
-The owner reviews and merges Phase 4 in the merge order above. Then an agent session starts
+The owner merges sotto-web#4, then this PR. Then an agent session starts
 Phase 5 (Ask and search) from `docs/PLAN.md`, creating `sotto-web/PHASE_5_PROGRESS.md`.
 
 ## Blockers and things the owner must do
@@ -46,8 +48,8 @@ Phase 5 (Ask and search) from `docs/PLAN.md`, creating `sotto-web/PHASE_5_PROGRE
 - [ ] Buy `sotto.ai` (available, not bought). Until then the demo uses `https://<ip>.sslip.io`.
 - [ ] Phase 3: create the Google and Microsoft OAuth apps (steps in the Phase 3 PR); until then
       those buttons stay hidden.
-- [ ] Phase 3: if not done yet, `terraform apply` in `terraform/dev` (demo `AUTH_SECRET`, the
-      mailbox password, ECR repositories `sotto/api` and `sotto/worker`).
+- [x] ECR repositories exist: sotto-api's `images` built and deployed `main` on 2026-10-06,
+      and sotto-web's `accounts` job pulls `sotto/api:main`.
 - [ ] Phase 4: `terraform apply` in `terraform/dev` after sotto-api#4 merges. It adds the files
       bucket's CORS rule (browser uploads from the demo origin), `s3:ListMultipartUploadParts`
       for the app role (resuming uploads) and a 7-day rule that aborts abandoned uploads. Check
@@ -60,10 +62,6 @@ Phase 5 (Ask and search) from `docs/PLAN.md`, creating `sotto-web/PHASE_5_PROGRE
 - [ ] Check: `terraform output github_secrets` prints `gh secret set` for `AWS_REGION` and
       `ECR_REGISTRY`, but the workflows read them as **variables** (`vars.`). They work today
       (the variables are set); keep both in sync if you rotate anything.
-- [ ] ECR is missing repositories: sotto-api `images` on `main` (2026-10-02 07:32) failed on
-      `sotto/worker`, and on 2026-10-03 sotto-web's `accounts` job found no `sotto/api` in the
-      registry its `ECR_REGISTRY` points to. `terraform/dev/ecr.tf` defines all four
-      (`local.services`), so `terraform apply` (step 1 above) creates them in that account.
 - [ ] ADR 0007 follow-up: the OIDC Terraform (`terraform/dev/github_oidc.tf`) is unused now.
 
 ## Open decisions
