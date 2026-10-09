@@ -34,11 +34,11 @@ with labelled passages (no chat model until the Open decision below).
 - Phase 4 — ingestion and meetings merged (sotto-api#4, sotto-web#4, sotto-platform#4–5):
   uploads, the worker pipeline, the transcriber, meetings, live status, recording, player and
   transcript. ADRs 0016–0017. Log: `sotto-web/PHASE_4_PROGRESS.md`.
+- Phase 4 upload fixes merged (sotto-api#5, sotto-platform#6, sotto-web#5): the app's scoped
+  S3 key (ADR 0018), storage in `/readyz`, finished uploads never shown as failed.
 - Phase 5 — Ask and search, ready for review (sotto-api#6, sotto-web#6, sotto-platform#7):
   hybrid retrieval with access in SQL, `GET /search`, notes, streamed answers with citations,
   the eval set in CI with real embeddings. ADRs 0019–0022. Log: `sotto-web/PHASE_5_PROGRESS.md`.
-- Phase 4 upload fixes merged (sotto-api#5, sotto-platform#6, sotto-web#5): the app's scoped
-  S3 key (ADR 0018), storage in `/readyz`, finished uploads never shown as failed.
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step
