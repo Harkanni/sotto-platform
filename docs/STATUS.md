@@ -19,11 +19,11 @@ container. The api, worker and transcriber couldn't sign any S3 call: `POST /upl
 The deploy stayed green because readiness didn't include storage. Separately, the bucket's CORS
 rule (browser part uploads) exists only after the owner's `terraform apply`.
 
-| Repo           | PR                                                      | What                                                                                                           | State |
-| -------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----- |
-| sotto-api      | [#5](https://github.com/Harkanni/sotto-api/pull/5)      | Storage in `/readyz`; `503 STORAGE_UNAVAILABLE` instead of a 500; sample load retry-safe                       | ready |
-| sotto-platform | [#6](https://github.com/Harkanni/sotto-platform/pull/6) | Scoped IAM user + SSM keys for the app (ADR 0018); keys passed in Compose; deploy fails if the api isn't ready | ready |
-| sotto-web      | [#5](https://github.com/Harkanni/sotto-web/pull/5)      | A finished upload never shows as failed; Phase 4 log                                                           | ready |
+| Repo           | PR                                                      | What                                                                                                                        | State |
+| -------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----- |
+| sotto-api      | [#5](https://github.com/Harkanni/sotto-api/pull/5)      | Storage in `/readyz`; `503 STORAGE_UNAVAILABLE` instead of a 500; sample load retry-safe; `/me` says if sample files are in | ready |
+| sotto-platform | [#6](https://github.com/Harkanni/sotto-platform/pull/6) | Scoped IAM user + SSM keys for the app (ADR 0018); keys passed in Compose; deploy fails if the api isn't ready              | ready |
+| sotto-web      | [#5](https://github.com/Harkanni/sotto-web/pull/5)      | A finished upload never shows as failed; "Finish loading sample content"; Phase 4 log                                       | ready |
 
 **What the owner does, in order** (needs AWS admin credentials on your machine):
 
@@ -36,8 +36,10 @@ rule (browser part uploads) exists only after the owner's `terraform apply`.
 3. Merge this PR. Its `deploy-config` run writes the new keys into the server's `.env`,
    restarts api/worker/transcriber, and now fails if the api isn't ready (it prints which
    dependency). If it ran before step 2, re-run it from the Actions tab.
-4. Merge sotto-web#5 (an upload edge case and the Phase 4 log).
-5. Check: open the demo, upload a PDF from Docs → it reaches Ready.
+4. Merge sotto-web#5 (two fixes and the Phase 4 log; it needs sotto-api#5's `/me`).
+5. Check: open the demo, upload a PDF from Docs → it reaches Ready. If you pressed "Explore with
+   sample content" while uploads were broken, Profile → Workspace now offers "Finish loading
+   sample content".
 
 ## Done
 
