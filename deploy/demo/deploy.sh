@@ -65,5 +65,23 @@ fi
 
 log "starting ${apps[*]} and waiting for health checks"
 docker compose up -d --wait --remove-orphans caddy "${apps[@]}"
+
+# Healthy only means "the process is up". Ready means the api reaches its database, queue and
+# storage: a deploy that can't must fail here, not when someone uploads a file (ADR 0018).
+# /readyz names each dependency and its error code, never secrets.
+if printf '%s\n' "${apps[@]}" | grep -qx api; then
+  ready_js="fetch('http://127.0.0.1:4000/readyz').then(async r=>{console.log(await r.text());process.exit(r.ok?0:1)}).catch(e=>{console.log(e.name);process.exit(1)})"
+  for attempt in $(seq 1 20); do
+    if result="$(docker compose exec -T api node -e "$ready_js" 2>&1)"; then
+      log "api ready: $result"
+      break
+    fi
+    if [ "$attempt" -eq 20 ]; then
+      log "api NOT ready after a minute: $result"
+      exit 1
+    fi
+    sleep 3
+  done
+fi
 docker image prune -af --filter "until=72h" > /dev/null
 log "done: $(paste -sd' ' tags.env)"

@@ -11,12 +11,16 @@ x-app-env: &app-env
   # The origin people open: sign-in links, invites and passkeys belong to it.
   APP_URL: https://${SITE_ADDRESS}
 
-# Object storage (Phase 4): the dev bucket's files/ prefix on S3. No endpoint or keys: the
-# server's IAM role signs every request, and browsers upload to S3 directly with presigned URLs
-# (the bucket's CORS rule allows this site; terraform/dev/storage.tf).
+# Object storage (Phase 4): the dev bucket's files/ prefix on S3, no endpoint (AWS's own).
+# Containers can't reach the server's IAM role (IMDS hop limit 1, terraform/dev/demo.tf), so the
+# app signs with its own keys, scoped to files/ (ADR 0018; SSM /sotto/demo/S3_*). Browsers
+# upload to S3 directly with presigned URLs (the bucket's CORS rule allows this site;
+# terraform/dev/storage.tf).
 x-storage-env: &storage-env
   S3_BUCKET: ${FILES_BUCKET}
   S3_REGION: ${AWS_REGION}
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
 
 x-logging: &logging
   # Cap log files so a chatty service can't fill the disk.
