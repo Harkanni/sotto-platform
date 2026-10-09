@@ -12,11 +12,15 @@
 Log: `sotto-web/PHASE_5_PROGRESS.md` (one log for all three repos: requirements, milestones,
 next step).
 
-| Repo           | Branch           | PR    | State |
-| -------------- | ---------------- | ----- | ----- |
-| sotto-api      | `feat/p5-ask`    | draft | M1    |
-| sotto-web      | `feat/p5-ask`    | draft | M0    |
-| sotto-platform | `docs/p5-status` | draft | M0    |
+| Repo           | Branch           | PR                | State                                                   |
+| -------------- | ---------------- | ----------------- | ------------------------------------------------------- |
+| sotto-api      | `feat/p5-ask`    | sotto-api#6, draft | M1–M4 done (search, notes, Ask API, eval set); CI `evals` being made green |
+| sotto-web      | `feat/p5-ask`    | sotto-web#6, draft | M5–M7 done (Ask screens, citations to the exact spot, ⌘K search, notes) |
+| sotto-platform | `docs/p5-status` | sotto-platform#7, draft | M8: Compose AI settings shared by api and worker, ADRs 0019–0022 |
+
+Merge order: sotto-api#6 first (migration `ask_and_search`, new routes), then sotto-web#6, then
+this PR. The demo keeps the labelled mock embedder, so Ask there is keyword search answering
+with labelled passages (no chat model until the Open decision below).
 
 ## Done
 
@@ -36,7 +40,8 @@ next step).
 
 ## Next step
 
-1. An agent session: continue Phase 5 from **Next steps** in `sotto-web/PHASE_5_PROGRESS.md`.
+1. An agent session: continue Phase 5 from **Next steps** in `sotto-web/PHASE_5_PROGRESS.md`
+   (CI `evals` green, design-system docs for Ask, PRs ready).
 2. The owner, if not done yet: `terraform apply` in `terraform/dev` (the upload fix's scoped S3
    key and the bucket's CORS rule; see Blockers), then upload a PDF on the demo.
 
@@ -65,6 +70,7 @@ next step).
 ## Open decisions
 
 - Demo chat provider key (Anthropic, OpenAI or Google) — default: whichever key is added first.
+  Until then the demo's Ask answers with labelled passages (ADR 0020).
 - Meeting bot — default: build the Google Meet bot ourselves (Phase 7).
 
 ## Environment facts
