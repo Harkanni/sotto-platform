@@ -19,10 +19,10 @@ container. The api, worker and transcriber couldn't sign any S3 call: `POST /upl
 The deploy stayed green because readiness didn't include storage. Separately, the bucket's CORS
 rule (browser part uploads) exists only after the owner's `terraform apply`.
 
-| Repo           | PR                                                 | What                                                                                                           | State         |
-| -------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------- |
-| sotto-api      | [#5](https://github.com/Harkanni/sotto-api/pull/5) | Storage in `/readyz`; `503 STORAGE_UNAVAILABLE` instead of a 500; sample load retry-safe                       | draft, pushed |
-| sotto-platform | `fix/p4-uploads` (this PR)                         | Scoped IAM user + SSM keys for the app (ADR 0018); keys passed in Compose; deploy fails if the api isn't ready | draft, pushed |
+| Repo           | PR                                                      | What                                                                                                           | State         |
+| -------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------- |
+| sotto-api      | [#5](https://github.com/Harkanni/sotto-api/pull/5)      | Storage in `/readyz`; `503 STORAGE_UNAVAILABLE` instead of a 500; sample load retry-safe                       | draft, pushed |
+| sotto-platform | [#6](https://github.com/Harkanni/sotto-platform/pull/6) | Scoped IAM user + SSM keys for the app (ADR 0018); keys passed in Compose; deploy fails if the api isn't ready | draft, pushed |
 
 **What the owner does, in order** (needs AWS admin credentials on your machine):
 
