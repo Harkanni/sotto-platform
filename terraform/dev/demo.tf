@@ -43,15 +43,8 @@ data "aws_iam_policy_document" "server" {
     actions   = ["s3:PutObject"]
     resources = ["${aws_s3_bucket.dev.arn}/backups/*"]
   }
-  statement {
-    sid = "AppFiles"
-    # ListMultipartUploadParts lets an interrupted upload resume where it stopped (Phase 4).
-    actions = [
-      "s3:GetObject", "s3:PutObject", "s3:DeleteObject",
-      "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts",
-    ]
-    resources = ["${aws_s3_bucket.dev.arn}/files/*"]
-  }
+  # No files/ access here: only the host uses this role, and the host never touches uploads.
+  # The app (in containers, which can't reach this role) has its own keys: app_storage.tf.
   statement {
     sid       = "ReadDemoSecrets"
     actions   = ["ssm:GetParametersByPath", "ssm:GetParameters"]
@@ -127,7 +120,7 @@ resource "aws_instance" "demo" {
 
   metadata_options {
     http_tokens                 = "required" # IMDSv2 only (blocks a classic SSRF credential theft)
-    http_put_response_hop_limit = 1          # containers can't reach the instance's credentials
+    http_put_response_hop_limit = 1          # containers can't reach the instance's credentials (the app has its own: ADR 0018)
   }
 
   root_block_device {
