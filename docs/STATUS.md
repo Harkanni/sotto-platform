@@ -3,20 +3,20 @@
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
 **Updated:** 2026-10-09
-**Current phase:** 5 — Ask and search (in progress)
+**Current phase:** 5 — Ask and search (complete, PRs ready for review)
 
 **Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
 
-## In progress: Phase 5 (Ask and search)
+## Ready for review: Phase 5 (Ask and search)
 
 Log: `sotto-web/PHASE_5_PROGRESS.md` (one log for all three repos: requirements, milestones,
 next step).
 
-| Repo           | Branch           | PR                | State                                                   |
-| -------------- | ---------------- | ----------------- | ------------------------------------------------------- |
-| sotto-api      | `feat/p5-ask`    | sotto-api#6, draft | M1–M4 done (search, notes, Ask API, eval set); CI `evals` being made green |
-| sotto-web      | `feat/p5-ask`    | sotto-web#6, draft | M5–M7 done (Ask screens, citations to the exact spot, ⌘K search, notes) |
-| sotto-platform | `docs/p5-status` | sotto-platform#7, draft | M8: Compose AI settings shared by api and worker, ADRs 0019–0022 |
+| Repo           | Branch           | PR               | State                                                                       |
+| -------------- | ---------------- | ---------------- | --------------------------------------------------------------------------- |
+| sotto-api      | `feat/p5-ask`    | sotto-api#6      | Ready: search, notes, Ask API, eval set; CI green incl. `evals` (real embeddings) |
+| sotto-web      | `feat/p5-ask`    | sotto-web#6      | Ready: Ask screens, citations to the exact spot, ⌘K search, notes           |
+| sotto-platform | `docs/p5-status` | sotto-platform#7 | Ready: Compose AI settings, ADRs 0019–0022, this STATUS                     |
 
 Merge order: sotto-api#6 first (migration `ask_and_search`, new routes), then sotto-web#6, then
 this PR. The demo keeps the labelled mock embedder, so Ask there is keyword search answering
@@ -34,15 +34,21 @@ with labelled passages (no chat model until the Open decision below).
 - Phase 4 — ingestion and meetings merged (sotto-api#4, sotto-web#4, sotto-platform#4–5):
   uploads, the worker pipeline, the transcriber, meetings, live status, recording, player and
   transcript. ADRs 0016–0017. Log: `sotto-web/PHASE_4_PROGRESS.md`.
+- Phase 5 — Ask and search, ready for review (sotto-api#6, sotto-web#6, sotto-platform#7):
+  hybrid retrieval with access in SQL, `GET /search`, notes, streamed answers with citations,
+  the eval set in CI with real embeddings. ADRs 0019–0022. Log: `sotto-web/PHASE_5_PROGRESS.md`.
 - Phase 4 upload fixes merged (sotto-api#5, sotto-platform#6, sotto-web#5): the app's scoped
   S3 key (ADR 0018), storage in `/readyz`, finished uploads never shown as failed.
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step
 
-1. An agent session: continue Phase 5 from **Next steps** in `sotto-web/PHASE_5_PROGRESS.md`
-   (CI `evals` green, design-system docs for Ask, PRs ready).
-2. The owner, if not done yet: `terraform apply` in `terraform/dev` (the upload fix's scoped S3
+1. The owner: review and merge sotto-api#6, then sotto-web#6, then sotto-platform#7. The
+   `ask_and_search` migration runs on deploy. On the demo, Ask is keyword search answering with
+   labelled passages until a chat model is decided (Open decisions).
+2. An agent session after the merges: start Phase 6 (PLAN Milestones row 6) with
+   `sotto-web/PHASE_6_PROGRESS.md`.
+3. The owner, if not done yet: `terraform apply` in `terraform/dev` (the upload fix's scoped S3
    key and the bucket's CORS rule; see Blockers), then upload a PDF on the demo.
 
 ## Blockers and things the owner must do
