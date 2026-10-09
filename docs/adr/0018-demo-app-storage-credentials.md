@@ -4,6 +4,7 @@
 - **Date:** 2026-10-09
 
 ## Context
+
 Phase 4 put uploaded files in the dev bucket's `files/` prefix and assumed "the server's IAM role
 signs every request". It can't: since Phase 1 the demo server requires IMDSv2 with a hop limit of
 1 (`terraform/dev/demo.tf`), so instance-role credentials never reach a Docker container. The
@@ -16,6 +17,7 @@ own credentials. The instance role can read every demo secret in SSM, and a hop 
 hand it to every container, including the public-facing web app and Mailpit.
 
 ## Decision
+
 - Keep the hop limit at 1. The instance role keeps only what the host needs (config sync,
   backups, secrets, ECR); its `files/` access is removed.
 - Terraform creates an IAM user, `sotto-demo-app`, allowed only `files/*` (get, put, delete,
@@ -27,6 +29,7 @@ hand it to every container, including the public-facing web app and Mailpit.
   instead of going green.
 
 ## Consequences
+
 - A long-lived key, like CI's (ADR 0007): rotate with
   `terraform apply -replace=aws_iam_access_key.app_files`, then re-run `deploy-config`.
 - Presigned upload and playback URLs stay valid for their whole lifetime (a role session can
