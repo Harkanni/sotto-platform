@@ -50,6 +50,20 @@ resource "aws_ssm_parameter" "mailpit_password" {
   value = random_password.mailpit.result
 }
 
+# Phase 6 (ADR 0023): the master key that wraps each workspace's own AI keys (BYOK). 32 random
+# bytes, base64 — the shape the api expects. Without it the demo can't store keys, and the AI
+# settings screen says so. Rotating it: move the old value to AI_KEYS_MASTER_PREVIOUS first, or
+# every saved key stops opening (people paste their keys again).
+resource "random_bytes" "ai_keys_master" {
+  length = 32
+}
+
+resource "aws_ssm_parameter" "ai_keys_master" {
+  name  = "/sotto/demo/AI_KEYS_MASTER"
+  type  = "SecureString"
+  value = random_bytes.ai_keys_master.base64
+}
+
 resource "aws_ssm_parameter" "site_address" {
   name  = "/sotto/demo/SITE_ADDRESS"
   type  = "String"
