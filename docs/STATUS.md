@@ -41,13 +41,13 @@ with labelled passages (no chat model until the Open decision below).
 - Phase 5 — Ask and search merged (sotto-api#6, sotto-web#6, sotto-platform#7):
   hybrid retrieval with access in SQL, `GET /search`, notes, streamed answers with citations,
   the eval set in CI with real embeddings. ADRs 0019–0022. Log: `sotto-web/PHASE_5_PROGRESS.md`.
-- CI/CD moves to Jenkins (ADR 0023): `Jenkinsfile` in sotto-api and sotto-web (branch
-  `chore/jenkins` in both app repos, `docs/jenkins` here). Setup guide: https://claude.ai/code/artifact/4949c203-aad7-434a-8b00-a140b968faa6
+- CI/CD moves to Jenkins (ADR 0023): `Jenkinsfile` in sotto-api and sotto-web (sotto-api#8,
+  sotto-web#8, sotto-platform#9). Setup guide: https://claude.ai/code/artifact/4949c203-aad7-434a-8b00-a140b968faa6
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step
 
-1. The owner: merge the Jenkins PRs (sotto-api, sotto-web, then this one), then set up the
+1. The owner: merge sotto-api#8, then sotto-web#8, then sotto-platform#9, then set up the
    `sotto-jenkins` server with the setup guide above. Once its `main` builds deploy, disable
    `images` in each app repo's Actions tab.
 2. An agent session: start Phase 6 (PLAN Milestones row 6) with
