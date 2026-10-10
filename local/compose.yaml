@@ -26,6 +26,17 @@ x-storage-env: &storage-env
   S3_ACCESS_KEY_ID: local
   S3_SECRET_ACCESS_KEY: local
 
+# AI (Phase 4–5): the worker embeds files and the api embeds each question with the SAME model,
+# or Ask falls back to keyword search. Both reach Ollama inside this stack.
+x-ai-env: &ai-env
+  AI_EMBEDDINGS: ollama:nomic-embed-text
+  OLLAMA_URL: http://ollama:11434
+  # A private chat model writes meeting notes and Ask's answers. Uncomment after `docker compose
+  # exec ollama ollama pull llama3.2:3b` (~3 GB RAM). Without it, notes are labelled "basic
+  # notes" and Ask answers with the matching passages, labelled as such.
+  # AI_PRIVATE_CHAT: ollama:llama3.2:3b
+  # AI_ASK_CHAT: ollama:llama3.2:3b  # only if Ask should use a different model than notes
+
 services:
   # ── Gateway: one origin, like production. /api/* → api, everything else → web ──
   gateway:
@@ -45,8 +56,9 @@ services:
       context: ../../sotto-api
       args: { APP: api }
     environment:
-      <<: [*api-env, *storage-env]
+      <<: [*api-env, *storage-env, *ai-env]
       PORT: "4000"
+      ASK_RATE_PER_MINUTE: "20" # questions per person per minute
     ports: ["4000:4000"] # direct access for Swagger and debugging
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -71,12 +83,7 @@ services:
       context: ../../sotto-api
       args: { APP: worker }
     environment:
-      <<: [*api-env, *storage-env]
-      AI_EMBEDDINGS: ollama:nomic-embed-text
-      OLLAMA_URL: http://ollama:11434
-      # Meeting notes from a private model: uncomment after `docker compose exec ollama ollama
-      # pull llama3.2:3b` (needs ~3 GB RAM). Without it, notes are labelled "basic notes".
-      # AI_PRIVATE_CHAT: ollama:llama3.2:3b
+      <<: [*api-env, *storage-env, *ai-env]
     depends_on:
       rabbitmq: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }

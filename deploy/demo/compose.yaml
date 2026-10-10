@@ -22,6 +22,13 @@ x-storage-env: &storage-env
   S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
   S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
 
+# LABELLED MOCKS on the demo (see the worker below): embeddings are the hash mock, and the api
+# must embed questions with the same one, so Ask runs as keyword search. No chat model: Ask
+# answers with the matching passages, labelled "Passages only". A hosted model is a Phase 6
+# decision (STATUS → Open decisions).
+x-ai-env: &ai-env
+  AI_EMBEDDINGS: fake:fake-hash
+
 x-logging: &logging
   # Cap log files so a chatty service can't fill the disk.
   driver: json-file
@@ -54,8 +61,9 @@ services:
     image: ${ECR_REGISTRY}/sotto/api:${API_TAG:-main}
     restart: unless-stopped
     environment:
-      <<: [*app-env, *storage-env]
+      <<: [*app-env, *storage-env, *ai-env]
       PORT: "4000"
+      ASK_RATE_PER_MINUTE: "10" # a public demo: fewer questions per person per minute
       AUTH_SECRET: ${AUTH_SECRET}
       # Mailpit until SES (ADR 0015): switch SMTP_URL to SES's SMTP endpoint once sotto.ai exists.
       SMTP_URL: smtp://mailpit:1025
@@ -88,10 +96,9 @@ services:
     image: ${ECR_REGISTRY}/sotto/worker:${WORKER_TAG:-main}
     restart: unless-stopped
     environment:
-      <<: [*app-env, *storage-env]
+      <<: [*app-env, *storage-env, *ai-env]
       WORKER_HEALTH_PORT: "4100"
       WORKER_CONCURRENCY: "1" # one job at a time on a small box
-      AI_EMBEDDINGS: fake:fake-hash
     deploy: { resources: { limits: { memory: 384m } } }
     logging: *logging
 
