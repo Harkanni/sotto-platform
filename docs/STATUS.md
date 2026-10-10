@@ -2,23 +2,24 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-10
-**Current phase:** 6 — AI modes, providers and billing (in progress)
+**Updated:** 2026-10-10 (Phase 6 complete)
+**Current phase:** 6 — AI modes, providers and billing (complete, PRs ready for review)
 
 **Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
 
-## In progress: Phase 6 (AI modes, providers and billing)
+## Ready for review: Phase 6 (AI modes, providers and billing)
 
 Log: `sotto-web/PHASE_6_PROGRESS.md` (one log for all three repos: requirements, milestones,
-next step).
+checks run, decisions).
 
-| Repo           | Branch             | PR               | State                                                    |
-| -------------- | ------------------ | ---------------- | -------------------------------------------------------- |
-| sotto-api      | `feat/p6-ai-modes` | sotto-api#7      | Draft: schema, key vault, adapters, AI settings, billing |
-| sotto-web      | `feat/p6-ai-modes` | sotto-web#7      | Draft: AI settings, Switch model, usage and billing      |
-| sotto-platform | `docs/p6-status`   | sotto-platform#8 | Draft: this STATUS, ADRs, Compose/demo settings          |
+| Repo           | Branch             | PR               | State                                                                                   |
+| -------------- | ------------------ | ---------------- | --------------------------------------------------------------------------------------- |
+| sotto-api      | `feat/p6-ai-modes` | sotto-api#7      | Ready: key vault, BYOK adapters, AI settings, gateway, metering, Paystack, re-index      |
+| sotto-web      | `feat/p6-ai-modes` | sotto-web#7      | Ready: AI settings, Switch model, Answer with Private, Usage and billing, onboarding step |
+| sotto-platform | `docs/p6-status`   | sotto-platform#8 | Ready: ADRs 0023–0027, Compose settings, demo master key (Terraform), this STATUS         |
 
-Merge order when ready: sotto-api first, then sotto-web, then this PR.
+Merge order: sotto-api#7 first (migration `ai_modes_and_billing`), then sotto-web#7, then this
+PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Blockers).
 
 ## Done
 
@@ -37,19 +38,35 @@ Merge order when ready: sotto-api first, then sotto-web, then this PR.
 - Phase 5 — Ask and search merged (sotto-api#6, sotto-web#6, sotto-platform#7):
   hybrid retrieval with access in SQL, `GET /search`, notes, streamed answers with citations,
   the eval set in CI with real embeddings. ADRs 0019–0022. Log: `sotto-web/PHASE_5_PROGRESS.md`.
+- Phase 6 — AI modes, providers and billing, ready for review (sotto-api#7, sotto-web#7,
+  sotto-platform#8): Private, BYOK and Managed per workspace; envelope-encrypted keys; model
+  catalog and Switch model; Restricted proven never to reach outside AI; metering, quotas and
+  plans; Paystack test mode behind `PaymentProvider`; embedding re-index. ADRs 0023–0027.
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step
 
-1. An agent session: continue Phase 6 from the log's **Next steps** (`sotto-web/PHASE_6_PROGRESS.md`
-   on `feat/p6-ai-modes`).
-2. The owner, when convenient: create a Paystack account and keep its **test** secret key ready
-   (billing uses a labelled stand-in until then), and decide the Managed/demo chat provider key
-   (Open decisions).
-3. The owner, if not done yet: `terraform apply` in `terraform/dev` (Phase 4 upload fix; see
-   Blockers), then upload a PDF on the demo.
+1. The owner: fix GitHub Actions billing (Blockers), re-run CI on the three PRs, then review and
+   merge sotto-api#7, sotto-web#7, sotto-platform#8 in that order. The `ai_modes_and_billing`
+   migration runs on deploy.
+2. The owner, for the demo: `terraform apply` in `terraform/dev` (adds
+   `/sotto/demo/AI_KEYS_MASTER`; nothing else changes from this phase), then re-run
+   `deploy-config`. Until then the demo's AI settings says keys can't be stored.
+3. Optional, the owner: a Paystack **test** secret key and plan codes in SSM
+   (`/sotto/demo/PAYSTACK_SECRET_KEY`, `PAYSTACK_PLAN_PRO_MONTHLY`, …) to try Paystack's own test
+   checkout; and a Managed provider key (`AI_MANAGED_CHAT`, `AI_MANAGED_KEY`) for the demo.
+4. An agent session after the merges: start Phase 7 (PLAN Milestones row 7, the live notetaker)
+   with `sotto-web/PHASE_7_PROGRESS.md`.
 
 ## Blockers and things the owner must do
+
+- [ ] **GitHub Actions won't start jobs** (2026-10-10, every repo): "recent account payments have
+      failed or your spending limit needs to be increased" → GitHub → Settings → Billing & plans.
+      No workflow runs until then (CI, `sync`, image builds, deploys). Phase 6's checks were run
+      locally and are recorded in the log.
+- [ ] Phase 6: `terraform apply` for the demo master key (Next step 2).
+- [ ] Phase 6: confirm Paystack's `transaction/verify` and subscription-list shapes with a real
+      test key (ADR 0026); the stand-in follows Paystack's docs.
 
 - [ ] Buy `sotto.ai` (available, not bought). Until then the demo uses `https://<ip>.sslip.io`.
 - [ ] Phase 3: create the Google and Microsoft OAuth apps (steps in the Phase 3 PR); until then
@@ -73,8 +90,11 @@ Merge order when ready: sotto-api first, then sotto-web, then this PR.
 
 ## Open decisions
 
-- Demo chat provider key (Anthropic, OpenAI or Google) — default: whichever key is added first.
-  Until then the demo's Ask answers with labelled passages (ADR 0020).
+- Demo Managed provider key (Anthropic, OpenAI or Google) — default: none. Workspaces can add
+  their own keys (BYOK) once the master key is applied; without either, the demo's Ask answers
+  with labelled passages (ADR 0020).
+- Real prices and limits — the plans config holds labelled placeholders (ADR 0025).
+- Gating Business features (audit export, admin policies) — listed, not enforced (ADR 0025).
 - Meeting bot — default: build the Google Meet bot ourselves (Phase 7).
 
 ## Environment facts
