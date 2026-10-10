@@ -2,12 +2,14 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-09
-**Current phase:** 5 — Ask and search (complete, PRs ready for review)
+**Updated:** 2026-10-10
+**Current phase:** 5 — Ask and search (merged); next: Phase 6
+**CI/CD:** Jenkins (ADR 0023) — each app repo's `Jenkinsfile`; GitHub Actions keeps the heavy `ci.yml` checks
 
-**Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
+**Demo:** deployed from `main` by Jenkins once it is set up; until then by the `images` workflows
+(`terraform output demo_url` prints the address)
 
-## Ready for review: Phase 5 (Ask and search)
+## Phase 5 (Ask and search): merged
 
 Log: `sotto-web/PHASE_5_PROGRESS.md` (one log for all three repos: requirements, milestones,
 next step).
@@ -36,23 +38,30 @@ with labelled passages (no chat model until the Open decision below).
   transcript. ADRs 0016–0017. Log: `sotto-web/PHASE_4_PROGRESS.md`.
 - Phase 4 upload fixes merged (sotto-api#5, sotto-platform#6, sotto-web#5): the app's scoped
   S3 key (ADR 0018), storage in `/readyz`, finished uploads never shown as failed.
-- Phase 5 — Ask and search, ready for review (sotto-api#6, sotto-web#6, sotto-platform#7):
+- Phase 5 — Ask and search merged (sotto-api#6, sotto-web#6, sotto-platform#7):
   hybrid retrieval with access in SQL, `GET /search`, notes, streamed answers with citations,
   the eval set in CI with real embeddings. ADRs 0019–0022. Log: `sotto-web/PHASE_5_PROGRESS.md`.
+- CI/CD moves to Jenkins (ADR 0023): `Jenkinsfile` in sotto-api and sotto-web (branch
+  `chore/jenkins` in both app repos, `docs/jenkins` here). Setup guide: https://claude.ai/code/artifact/4949c203-aad7-434a-8b00-a140b968faa6
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step
 
-1. The owner: review and merge sotto-api#6, then sotto-web#6, then sotto-platform#7. The
-   `ask_and_search` migration runs on deploy. On the demo, Ask is keyword search answering with
-   labelled passages until a chat model is decided (Open decisions).
-2. An agent session after the merges: start Phase 6 (PLAN Milestones row 6) with
-   `sotto-web/PHASE_6_PROGRESS.md`.
+1. The owner: merge the Jenkins PRs (sotto-api, sotto-web, then this one), then set up the
+   `sotto-jenkins` server with the setup guide above. Once its `main` builds deploy, disable
+   `images` in each app repo's Actions tab.
+2. An agent session: start Phase 6 (PLAN Milestones row 6) with
+   `sotto-web/PHASE_6_PROGRESS.md`. Phase 5 is merged (sotto-api#6, sotto-web#6,
+   sotto-platform#7); on the demo, Ask is keyword search answering with labelled passages until
+   a chat model is decided (Open decisions).
 3. The owner, if not done yet: `terraform apply` in `terraform/dev` (the upload fix's scoped S3
    key and the bucket's CORS rule; see Blockers), then upload a PDF on the demo.
 
 ## Blockers and things the owner must do
 
+- [ ] Jenkins (ADR 0023): launch `sotto-jenkins` (Ubuntu 24.04, t4g.large, SSH), install
+      Jenkins, Docker, Node 24, AWS CLI; add the GitHub token and AWS key; create the two
+      Multibranch Pipelines and webhooks; then disable `images.yml` in both app repos.
 - [ ] Buy `sotto.ai` (available, not bought). Until then the demo uses `https://<ip>.sslip.io`.
 - [ ] Phase 3: create the Google and Microsoft OAuth apps (steps in the Phase 3 PR); until then
       those buttons stay hidden.
@@ -82,6 +91,7 @@ with labelled passages (no chat model until the Open decision below).
 ## Environment facts
 
 - AWS: paid plan, region `eu-west-2` (London). Demo costs ~$35/month; budget alert at $40.
-- Demo server: t4g.medium (ARM) → images are built for `linux/arm64` on GitHub's arm64 runners.
+- Demo server: t4g.medium (ARM) → images are built for `linux/arm64`, natively on the ARM
+  Jenkins server (`sotto-jenkins`, t4g.large, Ubuntu, SSH) or on GitHub's arm64 runners.
 - Agent sandbox: no npm/PyPI/apt access and no Docker daemon. CI's `sync` jobs commit lockfiles
   and publish `node_modules` snapshots that `scripts/agent-deps.sh` restores (both app repos).
