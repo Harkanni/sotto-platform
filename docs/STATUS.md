@@ -11,11 +11,11 @@
 
 Log: `sotto-web/PHASE_7_PROGRESS.md` (requirements, milestones, next step, checks run).
 
-| Repo           | Branch           | PR                       | State                                                     |
-| -------------- | ---------------- | ------------------------ | --------------------------------------------------------- |
-| sotto-api      | `feat/p7-live`   | sotto-api#10 (draft)     | M1 schema done; Listen API next                           |
-| sotto-web      | `feat/p7-live`   | sotto-web#12 (draft)     | Phase 7 log; Listen mode after the API                    |
-| sotto-platform | `docs/p7-status` | this branch (draft)      | Based on `docs/p6-status` (sotto-platform#8 isn't merged) |
+| Repo           | Branch           | PR                        | State                                                     |
+| -------------- | ---------------- | ------------------------- | --------------------------------------------------------- |
+| sotto-api      | `feat/p7-live`   | sotto-api#10 (draft)      | M1 schema done; Listen API next                           |
+| sotto-web      | `feat/p7-live`   | sotto-web#12 (draft)      | Phase 7 log; Listen mode after the API                    |
+| sotto-platform | `docs/p7-status` | sotto-platform#10 (draft) | Based on `docs/p6-status` (sotto-platform#8 isn't merged) |
 
 Listen mode first (live transcript and notes in the app, ask mid-call), then calendar and the
 self-hosted Meet bot. Audio goes up as numbered HTTP chunks with the transcript coming back over
@@ -27,9 +27,9 @@ can be added while CI is blocked); an ADR records it.
 Log: `sotto-web/PHASE_6_PROGRESS.md` (one log for all three repos: requirements, milestones,
 checks run, decisions).
 
-| Repo           | Branch             | PR               | State                                                                                   |
-| -------------- | ------------------ | ---------------- | --------------------------------------------------------------------------------------- |
-| sotto-api      | `feat/p6-ai-modes` | sotto-api#7      | Ready: key vault, BYOK adapters, AI settings, gateway, metering, Paystack, re-index      |
+| Repo           | Branch             | PR               | State                                                                                     |
+| -------------- | ------------------ | ---------------- | ----------------------------------------------------------------------------------------- |
+| sotto-api      | `feat/p6-ai-modes` | sotto-api#7      | Ready: key vault, BYOK adapters, AI settings, gateway, metering, Paystack, re-index       |
 | sotto-web      | `feat/p6-ai-modes` | sotto-web#7      | Ready: AI settings, Switch model, Answer with Private, Usage and billing, onboarding step |
 | sotto-platform | `docs/p6-status`   | sotto-platform#8 | Ready: ADRs 0023–0027, Compose settings, demo master key (Terraform), this STATUS         |
 
