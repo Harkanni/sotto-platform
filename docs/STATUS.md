@@ -2,7 +2,7 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-12 (Phase 7 started)
+**Updated:** 2026-10-12 (Phase 7 in progress; blockers consolidated)
 **Current phase:** 7 — Live notetaker (in progress)
 
 **Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
@@ -79,33 +79,50 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
 
 ## Blockers and things the owner must do
 
-- [ ] **GitHub Actions won't start jobs** (2026-10-10, every repo): "recent account payments have
-      failed or your spending limit needs to be increased" → GitHub → Settings → Billing & plans.
-      No workflow runs until then (CI, `sync`, image builds, deploys). Phase 6's checks were run
-      locally and are recorded in the log.
-- [ ] Phase 6: `terraform apply` for the demo master key (Next step 2).
-- [ ] Phase 6: confirm Paystack's `transaction/verify` and subscription-list shapes with a real
-      test key (ADR 0026); the stand-in follows Paystack's docs.
+Consolidated 2026-10-12. CI/CD has moved from GitHub Actions to Jenkins (the owner's decision;
+sotto-platform#9 records it as ADR 0023).
 
-- [ ] Buy `sotto.ai` (available, not bought). Until then the demo uses `https://<ip>.sslip.io`.
-- [ ] Phase 3: create the Google and Microsoft OAuth apps (steps in the Phase 3 PR); until then
-      those buttons stay hidden.
-- [x] ECR repositories exist: sotto-api's `images` built and deployed `main` on 2026-10-06,
-      and sotto-web's `accounts` job pulls `sotto/api:main`.
-- [ ] Phase 4 + upload fix: `cd terraform/dev && terraform plan`, then `terraform apply` (if
-      not done yet). Expect to **add** `aws_iam_user.app_files`, its policy and access key,
-      two `aws_ssm_parameter` (`/sotto/demo/S3_*`), the bucket CORS and lifecycle rules, and
-      **change** `aws_iam_role_policy.server` and the `demo/*` config objects; nothing
-      destroyed or replaced. Then re-run `deploy-config` from the Actions tab so the server's
-      `.env` gets the keys (it fails if the api isn't ready, naming the dependency).
-- [ ] Phase 4 decision: the demo server (t4g.medium, 4 GB) has no room for a local chat model
-      and is tight for real transcription + embeddings (see the phase log, "Missing
-      specifications" 3–4). Default until you decide: labelled mock engines on the demo, real
-      ones locally and in CI.
-- [ ] Check: `terraform output github_secrets` prints `gh secret set` for `AWS_REGION` and
-      `ECR_REGISTRY`, but the workflows read them as **variables** (`vars.`). They work today
-      (the variables are set); keep both in sync if you rotate anything.
-- [ ] ADR 0007 follow-up: the OIDC Terraform (`terraform/dev/github_oidc.tf`) is unused now.
+**Blocking merges and deploys**
+
+- [ ] **Jenkins builds pull requests.** No Jenkins status appears on the Phase 7 branches yet
+      (only GitGuardian), so no PR has a green check to merge on. Each Multibranch Pipeline needs
+      branch and PR discovery and a GitHub webhook, and reports a status on the commit.
+- [ ] **What GitHub Actions still did.** `ci.yml` has jobs Jenkins doesn't run: `sync` (commits
+      lockfiles and publishes the `node_modules` snapshot agent sessions restore — needed for any
+      new dependency, e.g. the Meet bot's headless browser), the api's `python`, `ingestion`,
+      `evals`, `smoke` and the web's `stories`, `accounts`, `smoke`. Actions still refuses to run
+      (billing), so they run nowhere. Decide: port them to Jenkins (the agent can write the
+      stages), or fix Actions billing and keep them there, or drop them.
+- [ ] **Turn off the old deploy.** Disable `images.yml` in both app repos once Jenkins deploys
+      `main`, so two systems never deploy at once.
+- [ ] **Merge in order:** sotto-platform#8 (Phase 6 STATUS), then sotto-platform#9 (Jenkins) —
+      both add an ADR 0023: renumber Jenkins to the next free number (0028+ are Phase 7's, so
+      ask the agent to renumber it).
+
+**For the demo**
+
+- [ ] Phase 6: `terraform apply` in `terraform/dev` (adds `/sotto/demo/AI_KEYS_MASTER`), then
+      redeploy the config. Until then the demo can't store workspace API keys.
+- [ ] Phase 4 upload fix: `terraform apply` (the app's scoped S3 key, bucket CORS and lifecycle),
+      if not done yet.
+- [ ] Decide the demo's AI: the t4g.medium (4 GB) has no room for a local chat model and is tight
+      for real transcription; default is labelled mock engines on the demo.
+
+**For features (Phase 3 and 7)**
+
+- [ ] Google and Microsoft OAuth apps: sign-in buttons stay hidden without them, and Phase 7's
+      calendar connection needs them (with calendar read scopes).
+- [ ] A Google account for the notetaker bot ("Sotto Notetaker"), or accept that it joins Meet
+      as a signed-out guest the host must admit.
+- [ ] Optional: a Paystack test key and plan codes (confirms ADR 0026's response shapes); a
+      Managed provider key.
+- [ ] Buy `sotto.ai` (domain and company email); until then the demo uses `<ip>.sslip.io`.
+
+**Housekeeping**
+
+- [ ] `terraform/dev/github_oidc.tf` is unused since ADR 0007; and with Jenkins, the GitHub
+      secrets and variables for AWS (`AWS_ACCESS_KEY_ID`, `ECR_REGISTRY` …) can be removed once
+      `images.yml` is off.
 
 ## Open decisions
 
