@@ -114,8 +114,13 @@ resource "aws_instance" "demo" {
     ecr_registry = local.ecr_registry
   })
 
-  credit_specification {
-    cpu_credits = "standard" # never bill for burst above the baseline; the demo is mostly idle
+  # Burstable (t*) types only: never bill for burst above the baseline. Other families have no
+  # credits, and AWS refuses the setting for them.
+  dynamic "credit_specification" {
+    for_each = startswith(var.demo_instance_type, "t") ? [1] : []
+    content {
+      cpu_credits = "standard"
+    }
   }
 
   metadata_options {
@@ -125,7 +130,7 @@ resource "aws_instance" "demo" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 30
+    volume_size = var.demo_volume_gb # grows in place; the OS extends the filesystem on boot
     encrypted   = true
   }
 
@@ -143,13 +148,33 @@ resource "aws_instance" "demo" {
   depends_on = [aws_s3_object.demo_config, aws_ssm_parameter.postgres_password, aws_ssm_parameter.rabbitmq_password]
 }
 
-# A fixed public IP, so the sslip.io name (and later the DNS record) never changes.
+# A fixed public IP, so the sslip.io name (and later the DNS record) never changes while the
+# instance stops and starts. Terraform's own EIP is released by `terraform destroy`; to keep one
+# address for good, allocate an EIP yourself and set demo_eip_allocation_id (it's then only
+# attached, never released).
 resource "aws_eip" "demo" {
+  count  = var.demo_eip_allocation_id == "" ? 1 : 0
   domain = "vpc"
   tags   = { Name = "sotto-demo" }
 }
 
+data "aws_eip" "kept" {
+  count = var.demo_eip_allocation_id == "" ? 0 : 1
+  id    = var.demo_eip_allocation_id
+}
+
+locals {
+  demo_eip_id    = var.demo_eip_allocation_id == "" ? aws_eip.demo[0].id : data.aws_eip.kept[0].id
+  demo_public_ip = var.demo_eip_allocation_id == "" ? aws_eip.demo[0].public_ip : data.aws_eip.kept[0].public_ip
+}
+
 resource "aws_eip_association" "demo" {
   instance_id   = aws_instance.demo.id
-  allocation_id = aws_eip.demo.id
+  allocation_id = local.demo_eip_id
+}
+
+# Moving the existing EIP into the counted resource without releasing it.
+moved {
+  from = aws_eip.demo
+  to   = aws_eip.demo[0]
 }

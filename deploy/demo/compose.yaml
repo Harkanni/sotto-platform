@@ -1,6 +1,6 @@
-# The always-on demo server's stack (t4g.medium, 4 GB, ARM). Synced from S3 to /opt/sotto by
-# deploy.sh. Image tags come from tags.env (written on each deploy); secrets from SSM via .env.
-# Memory limits keep one runaway service from starving the rest on a small box.
+# The always-on demo server's stack (m7g.2xlarge: 8 vCPU, 32 GB, ARM; ADR 0031). Synced from S3
+# to /opt/sotto by deploy.sh. Image tags come from tags.env (written on each deploy); secrets and
+# settings from SSM via .env. Memory limits keep one runaway service from starving the rest.
 name: sotto
 
 x-app-env: &app-env
@@ -22,15 +22,15 @@ x-storage-env: &storage-env
   S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
   S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
 
-# LABELLED MOCKS on the demo (see the worker below): embeddings are the hash mock, and the api
-# must embed questions with the same one, so Ask runs as keyword search. No Private chat model
-# fits on this box: unless a workspace adds its own key (BYOK) or Managed is set up below, Ask
-# answers with the matching passages, labelled "Passages only".
+# Real AI on the demo (ADR 0031), all inside the server: Ollama serves the embedding model and a
+# Private chat model (DEMO_CHAT_MODEL from SSM, llama3.1:8b by default), so Ask answers, notes
+# and live notes are written privately. The api and worker must embed with the same model.
 x-ai-env: &ai-env
-  AI_EMBEDDINGS: fake:fake-hash
+  AI_EMBEDDINGS: ollama:nomic-embed-text
+  OLLAMA_URL: http://ollama:11434
+  AI_PRIVATE_CHAT: ollama:${DEMO_CHAT_MODEL:-llama3.1:8b}
 
-x-logging: &logging
-  # Cap log files so a chatty service can't fill the disk.
+x-logging: &logging # Cap log files so a chatty service can't fill the disk.
   driver: json-file
   options: { max-size: "10m", max-file: "3" }
 
@@ -54,7 +54,7 @@ services:
     restart: unless-stopped
     environment:
       API_URL: http://api:4000
-    deploy: { resources: { limits: { memory: 384m } } }
+    deploy: { resources: { limits: { memory: 512m } } }
     logging: *logging
 
   api:
@@ -80,6 +80,8 @@ services:
       PAYSTACK_PLAN_BUSINESS_MONTHLY: ${PAYSTACK_PLAN_BUSINESS_MONTHLY:-}
       PAYSTACK_PLAN_BUSINESS_YEARLY: ${PAYSTACK_PLAN_BUSINESS_YEARLY:-}
       AUTH_SECRET: ${AUTH_SECRET}
+      # Phase 7 Listen mode: live audio chunks go straight to the transcriber.
+      TRANSCRIBER_URL: http://transcriber:5000
       # Mailpit until SES (ADR 0015): switch SMTP_URL to SES's SMTP endpoint once sotto.ai exists.
       SMTP_URL: smtp://mailpit:1025
       MAIL_FROM: Sotto <no-reply@${SITE_ADDRESS}>
@@ -90,7 +92,8 @@ services:
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
     depends_on:
       postgres: { condition: service_healthy }
-    deploy: { resources: { limits: { memory: 512m } } }
+      ollama: { condition: service_healthy }
+    deploy: { resources: { limits: { memory: 1g } } }
     logging: *logging
 
   migrate:
@@ -101,20 +104,18 @@ services:
     profiles: ["tools"] # only runs when deploy.sh asks for it
     logging: *logging
 
-  # LABELLED MOCKS on the demo, until the owner decides its capacity (STATUS, Phase 4): this
-  # 4 GB server has no room for Ollama and Whisper beside everything else. Uploads, reading
-  # PDFs, the pipeline, the player and the transcript all run for real; embeddings are a
-  # hash-based mock and transcripts are placeholder lines, both labelled in the app. To go
-  # real: a bigger instance, then AI_EMBEDDINGS=ollama:nomic-embed-text with an ollama service,
-  # and TRANSCRIBER_ENGINE=faster-whisper with a /models volume (see local/compose.yaml).
+  # Everything for real (ADR 0031): embeddings and meeting notes through Ollama, transcripts
+  # from faster-whisper below.
   worker:
     image: ${ECR_REGISTRY}/sotto/worker:${WORKER_TAG:-main}
     restart: unless-stopped
     environment:
       <<: [*app-env, *storage-env, *ai-env]
       WORKER_HEALTH_PORT: "4100"
-      WORKER_CONCURRENCY: "1" # one job at a time on a small box
-    deploy: { resources: { limits: { memory: 384m } } }
+      WORKER_CONCURRENCY: "2"
+    depends_on:
+      ollama: { condition: service_healthy }
+    deploy: { resources: { limits: { memory: 1g } } }
     logging: *logging
 
   transcriber:
@@ -123,8 +124,44 @@ services:
     environment:
       <<: *storage-env
       RABBITMQ_URL: amqp://sotto:${RABBITMQ_PASSWORD}@rabbitmq:5672
-      TRANSCRIBER_ENGINE: fake
-    deploy: { resources: { limits: { memory: 512m } } }
+      # Real transcription on the CPU. `small` is clearly better than `base` and still several
+      # times faster than real time on 8 Graviton cores; the model downloads once into /models.
+      TRANSCRIBER_ENGINE: faster-whisper
+      WHISPER_MODEL: small
+      WHISPER_THREADS: "4" # leave cores for Ollama
+    volumes: ["whisper:/models"]
+    deploy: { resources: { limits: { memory: 4g } } }
+    logging: *logging
+
+  # Private AI inside the server (ADR 0031). On first start it pulls the embedding model and the
+  # chat model (~5 GB) into its volume; it reports healthy only once both are there, so the api
+  # and worker never start against a model that isn't loaded. Later starts find them at once.
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        until ollama list >/dev/null 2>&1; do sleep 1; done
+        ollama pull nomic-embed-text && ollama pull "$${CHAT_MODEL}"
+        wait
+    environment:
+      CHAT_MODEL: ${DEMO_CHAT_MODEL:-llama3.1:8b}
+      OLLAMA_KEEP_ALIVE: "24h" # keep the model in memory: no cold start on the next question
+      OLLAMA_NUM_PARALLEL: "2"
+    volumes: ["ollama:/root/.ollama"]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'ollama list | grep -q nomic-embed-text && ollama list | grep -q "$${CHAT_MODEL%%:*}"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 180 # the first pull can take a few minutes
+      start_period: 30s
+    deploy: { resources: { limits: { memory: 16g } } }
     logging: *logging
 
   # The demo's mailbox (ADR 0015): catches every email the api sends; read it at /mail/ with the
@@ -152,13 +189,20 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
-    deploy: { resources: { limits: { memory: 512m } } }
+    deploy: { resources: { limits: { memory: 2g } } }
     logging: *logging
 
   redis:
     image: redis:8-alpine
     restart: unless-stopped
-    command: ["redis-server", "--maxmemory", "96mb", "--maxmemory-policy", "allkeys-lru"]
+    command:
+      [
+        "redis-server",
+        "--maxmemory",
+        "96mb",
+        "--maxmemory-policy",
+        "allkeys-lru",
+      ]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -187,3 +231,5 @@ volumes:
   caddy_config:
   pgdata:
   rabbitmq:
+  ollama: # model weights (~6 GB): kept across deploys
+  whisper: # the Whisper model: kept across deploys
