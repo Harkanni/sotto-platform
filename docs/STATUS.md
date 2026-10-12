@@ -73,9 +73,8 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
 4. Phase 7 is under way on the branches above (Phase 6 is merged in sotto-api and sotto-web;
    this repo's #8 and #9 are still open). An agent session continues from the Phase 7 log's
    **Next steps**.
-5. The owner, when merging sotto-platform#8 and #9: both add an **ADR 0023** (BYOK keys, and
-   Jenkins). Renumber the Jenkins one (0028 is taken by Phase 7, so the next free number when
-   you merge). Phase 7's ADRs start at 0028.
+5. ADR numbers: 0023–0027 Phase 6 (merged), 0028–0029 Phase 7 (this branch), 0030 Jenkins
+   (sotto-platform#9, renumbered), 0031 the demo's real-AI host.
 
 ## Blockers and things the owner must do
 
