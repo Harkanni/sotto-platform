@@ -45,8 +45,8 @@ variable "demo_instance_type" {
     and faster-whisper, with room to spare (ADR 0031). t4g.medium (4 GB) only fits the
     labelled mocks.
   EOT
-  type        = string
-  default     = "m7g.2xlarge"
+  type    = string
+  default = "m7g.2xlarge"
 }
 
 variable "demo_volume_gb" {
@@ -68,8 +68,8 @@ variable "demo_eip_allocation_id" {
     redirect URLs) across `terraform destroy` and `apply`. Empty: Terraform allocates one, which
     a destroy releases.
   EOT
-  type        = string
-  default     = ""
+  type    = string
+  default = ""
 }
 
 variable "workbench_enabled" {
