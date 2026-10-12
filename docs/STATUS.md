@@ -81,22 +81,18 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
 Consolidated 2026-10-12. CI/CD has moved from GitHub Actions to Jenkins (the owner's decision;
 sotto-platform#9 records it as ADR 0023).
 
-**Blocking merges and deploys**
+**Blocking merges and deploys** (updated 2026-10-12, late)
 
-- [ ] **Jenkins builds pull requests.** No Jenkins status appears on the Phase 7 branches yet
-      (only GitGuardian), so no PR has a green check to merge on. Each Multibranch Pipeline needs
-      branch and PR discovery and a GitHub webhook, and reports a status on the commit.
-- [ ] **What GitHub Actions still did.** `ci.yml` has checks Jenkins doesn't run: the api's
-      `python` (transcriber tests), `ingestion`, `evals`, `smoke`, and the web's `stories`,
-      `accounts`, `smoke`. Actions still refuses to run (billing), so they run nowhere. Decide:
-      port them to Jenkins (the agent can write the stages), or fix Actions billing, or drop
-      them. (`sync` is no longer needed: agent sessions can reach the npm registry again as of
-      2026-10-12, so they install and commit lockfiles themselves.)
-- [ ] **Turn off the old deploy.** Disable `images.yml` in both app repos once Jenkins deploys
-      `main`, so two systems never deploy at once.
-- [ ] **Merge in order:** sotto-platform#8 (Phase 6 STATUS), then sotto-platform#9 (Jenkins) —
-      both add an ADR 0023: renumber Jenkins to the next free number (0028+ are Phase 7's, so
-      ask the agent to renumber it).
+- [ ] **Jenkins reports on PRs**: still no Jenkins status on any branch (only GitGuardian).
+      Branch + PR discovery, a GitHub webhook to `/github-webhook/`, port 8080 open to GitHub.
+- [x] **Checks Actions ran**: ported to Jenkins — sotto-api#11, sotto-web#13, sotto-platform#12
+      (each removes its Actions workflows). Jenkins host needs the Lockable Resources plugin,
+      Playwright's libraries (`sudo npx -y playwright@1 install-deps chromium`), ≥60 GB disk, a
+      `CONFIG_BUCKET` global variable, and a third job for sotto-platform.
+- [x] **ADR numbering**: Jenkins renumbered to 0030 in sotto-platform#9 (mergeable); Phase 7 has
+      0028–0029; the demo host 0031.
+- Merge order: sotto-platform#9 → the three CI PRs (once green on Jenkins) → sotto-platform#11
+  (OIDC removal) and #13 (demo host) → Phase 7 when complete.
 
 **For the demo**
 
@@ -104,8 +100,8 @@ sotto-platform#9 records it as ADR 0023).
       redeploy the config. Until then the demo can't store workspace API keys.
 - [ ] Phase 4 upload fix: `terraform apply` (the app's scoped S3 key, bucket CORS and lifecycle),
       if not done yet.
-- [ ] Decide the demo's AI: the t4g.medium (4 GB) has no room for a local chat model and is tight
-      for real transcription; default is labelled mock engines on the demo.
+- [x] Demo's AI: decided — real private AI on m7g.2xlarge (sotto-platform#13, ADR 0031);
+      owner runs `terraform plan`/`apply` and the one-time re-index (steps in the PR).
 
 **For features (Phase 3 and 7)**
 
@@ -119,7 +115,7 @@ sotto-platform#9 records it as ADR 0023).
 
 **Housekeeping**
 
-- [ ] `terraform/dev/github_oidc.tf` is unused since ADR 0007; and with Jenkins, the GitHub
+- [x] `terraform/dev/github_oidc.tf` removed in sotto-platform#11 (plan: 3 to destroy); and with Jenkins, the GitHub
       secrets and variables for AWS (`AWS_ACCESS_KEY_ID`, `ECR_REGISTRY` …) can be removed once
       `images.yml` is off.
 
