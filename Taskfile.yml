@@ -28,6 +28,10 @@ tasks:
     desc: Follow logs (task logs -- api)
     cmds: ["{{.COMPOSE}} logs -f {{.CLI_ARGS}}"]
 
+  reindex:
+    desc: After changing AI_EMBEDDINGS, embed every passage with the new model beside the live index (task reindex -- --swap to switch searches over once it's complete)
+    cmds: ["{{.COMPOSE}} run --rm worker node dist/reindex-cli.js {{.CLI_ARGS}}"]
+
   tf:bootstrap:
     desc: One-time — create the S3 bucket that stores Terraform state
     dir: terraform/bootstrap

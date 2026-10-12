@@ -51,7 +51,7 @@ link, passkeys, Google and Microsoft, development and the demo on AWS eu-west-2)
 - Never commit secrets. Only `.env.example` files. Real values live in local `.env`, GitHub
   Actions secrets, or AWS SSM Parameter Store (`/sotto/<env>/…`). AWS access for CI uses IAM
   access keys (ADR 0007); don't reintroduce OIDC.
-- **CI/CD runs on Jenkins** (ADR 0023) on its own EC2 server, `sotto-jenkins`, reached over SSH.
+- **CI/CD runs on Jenkins** (ADR 0030) on its own EC2 server, `sotto-jenkins`, reached over SSH.
   Each app repo's `Jenkinsfile` runs the checks and, on `main`, builds the images and deploys the
   demo through the `sotto-deploy` SSM document. GitHub Actions keeps the heavy `ci.yml` checks;
   `images.yml` is only a fallback.
@@ -63,10 +63,10 @@ link, passkeys, Google and Microsoft, development and the demo on AWS eu-west-2)
 
 ## This repo's layout
 
-| Path           | Holds                                                                                  |
-| -------------- | -------------------------------------------------------------------------------------- |
-| `docs/`        | STATUS, PLAN, BRIEF, ADRs, CHANGELOG, runbooks, LEARNING notes                         |
-| `local/`       | Docker Compose for the whole stack, built from `../sotto-api` and `../sotto-web`       |
-| `deploy/demo/` | The Compose + Caddy files the always-on demo server runs                               |
+| Path           | Holds                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `docs/`        | STATUS, PLAN, BRIEF, ADRs, CHANGELOG, runbooks, LEARNING notes                          |
+| `local/`       | Docker Compose for the whole stack, built from `../sotto-api` and `../sotto-web`        |
+| `deploy/demo/` | The Compose + Caddy files the always-on demo server runs                                |
 | `terraform/`   | `bootstrap/` (state bucket) and `dev/` (demo + workbench servers, ECR, S3, SSM, budget) |
-| `Taskfile.yml` | Common commands (`task up`, `task down`, `task tf:plan` …)                             |
+| `Taskfile.yml` | Common commands (`task up`, `task down`, `task tf:plan` …)                              |

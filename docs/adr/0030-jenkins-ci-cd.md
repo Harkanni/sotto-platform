@@ -1,9 +1,11 @@
-# 0023 — Jenkins runs CI/CD on its own EC2 server
+# 0030 — Jenkins runs CI/CD on its own EC2 server
 
 - **Status:** accepted
-- **Date:** 2026-10-10
+- **Date:** 2026-10-10 (numbered 0030 on 2026-10-12: 0023 was taken by Phase 6's key vault ADR,
+  and 0028–0029 by Phase 7)
 
 ## Context
+
 Until now GitHub Actions ran every check (`ci.yml`) and every deploy (`images.yml`) in
 `sotto-api` and `sotto-web`. The owner is learning Cloud/Platform Engineering and wants Sotto's
 CI/CD on Jenkins, run from a server he manages himself, set up the plain way: an EC2 instance he
@@ -11,6 +13,7 @@ reaches over SSH, configured by hand. Setup guide:
 https://claude.ai/code/artifact/4949c203-aad7-434a-8b00-a140b968faa6
 
 ## Decision
+
 - Jenkins LTS runs on a separate EC2 instance, `sotto-jenkins`: Ubuntu 24.04 on a `t4g.large`
   (ARM, 8 GB) in `eu-west-2`, with Docker (Buildx, Compose), Node 24 with pnpm via Corepack, and
   the AWS CLI. Access is SSH with a key pair (port 22 from the owner's IP); the Jenkins UI and
@@ -25,6 +28,7 @@ https://claude.ai/code/artifact/4949c203-aad7-434a-8b00-a140b968faa6
   fallback but is disabled in the Actions tab once Jenkins deploys, so nothing deploys twice.
 
 ## Consequences
+
 - The owner maintains a second server: Jenkins and plugin updates, disk clean-up, the GitHub
   token's 90-day rotation, and its cost (a `t4g.large`, more than the demo; stop it when idle).
 - The pipeline lives in `Jenkinsfile`; agents change CI/CD there, not in `images.yml`.
@@ -32,3 +36,11 @@ https://claude.ai/code/artifact/4949c203-aad7-434a-8b00-a140b968faa6
   Later hardening: HTTPS in front of Jenkins and webhooks limited to GitHub's IP ranges.
 - One executor: builds run one at a time (fixed test ports, one demo server).
 - Rolling back is re-enabling `images.yml`.
+
+## Update, 2026-10-12
+
+GitHub Actions is no longer used at all. Every check `ci.yml` ran (transcriber pytest, image
+smoke, the 30-minute ingestion check, the eval set, stories, end-to-end, the accounts flow,
+gitleaks) moved into the Jenkinsfiles, and `ci.yml` and `images.yml` were removed
+(sotto-api and sotto-web `chore/jenkins-full-ci`). The api and web pipelines share the host's
+ports, so both take a `sotto-ci-host` lock (Lockable Resources plugin).
