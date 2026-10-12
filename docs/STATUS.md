@@ -2,10 +2,25 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-10 (Phase 6 complete)
-**Current phase:** 6 — AI modes, providers and billing (complete, PRs ready for review)
+**Updated:** 2026-10-12 (Phase 7 started)
+**Current phase:** 7 — Live notetaker (in progress)
 
 **Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
+
+## In progress: Phase 7 (Live notetaker)
+
+Log: `sotto-web/PHASE_7_PROGRESS.md` (requirements, milestones, next step, checks run).
+
+| Repo           | Branch           | PR                       | State                                                     |
+| -------------- | ---------------- | ------------------------ | --------------------------------------------------------- |
+| sotto-api      | `feat/p7-live`   | sotto-api#10 (draft)     | M1 schema done; Listen API next                           |
+| sotto-web      | `feat/p7-live`   | sotto-web#12 (draft)     | Phase 7 log; Listen mode after the API                    |
+| sotto-platform | `docs/p7-status` | this branch (draft)      | Based on `docs/p6-status` (sotto-platform#8 isn't merged) |
+
+Listen mode first (live transcript and notes in the app, ask mid-call), then calendar and the
+self-hosted Meet bot. Audio goes up as numbered HTTP chunks with the transcript coming back over
+SSE rather than a WebSocket (Next's rewrites don't carry WebSocket upgrades, and no dependency
+can be added while CI is blocked); an ADR records it.
 
 ## Ready for review: Phase 6 (AI modes, providers and billing)
 
@@ -55,8 +70,12 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
 3. Optional, the owner: a Paystack **test** secret key and plan codes in SSM
    (`/sotto/demo/PAYSTACK_SECRET_KEY`, `PAYSTACK_PLAN_PRO_MONTHLY`, …) to try Paystack's own test
    checkout; and a Managed provider key (`AI_MANAGED_CHAT`, `AI_MANAGED_KEY`) for the demo.
-4. An agent session after the merges: start Phase 7 (PLAN Milestones row 7, the live notetaker)
-   with `sotto-web/PHASE_7_PROGRESS.md`.
+4. Phase 7 is under way on the branches above (Phase 6 is merged in sotto-api and sotto-web;
+   this repo's #8 and #9 are still open). An agent session continues from the Phase 7 log's
+   **Next steps**.
+5. The owner, when merging sotto-platform#8 and #9: both add an **ADR 0023** (BYOK keys, and
+   Jenkins). Renumber the Jenkins one (0028 is taken by Phase 7, so the next free number when
+   you merge). Phase 7's ADRs start at 0028.
 
 ## Blockers and things the owner must do
 
