@@ -36,6 +36,13 @@ x-ai-env: &ai-env
   # notes" and Ask answers with the matching passages, labelled as such.
   # AI_PRIVATE_CHAT: ollama:llama3.2:3b
   # AI_ASK_CHAT: ollama:llama3.2:3b  # only if Ask should use a different model than notes
+  # Phase 6: the master key for workspaces' own AI keys (BYOK, ADR 0023). Compose reads it from
+  # local/.env (never committed; see local/.env.example): `openssl rand -base64 32`. Without it
+  # AI settings says keys can't be stored. Losing it means pasting keys again.
+  AI_KEYS_MASTER: ${AI_KEYS_MASTER:-}
+  # Managed mode: Sotto's own provider account (one provider, comma-separated models).
+  AI_MANAGED_CHAT: ${AI_MANAGED_CHAT:-}
+  AI_MANAGED_KEY: ${AI_MANAGED_KEY:-}
 
 services:
   # ── Gateway: one origin, like production. /api/* → api, everything else → web ──
@@ -59,6 +66,11 @@ services:
       <<: [*api-env, *storage-env, *ai-env]
       PORT: "4000"
       ASK_RATE_PER_MINUTE: "20" # questions per person per minute
+      # Payments (ADR 0026): empty → the labelled test checkout, nothing charged. Put a Paystack
+      # *test* key and plan codes in local/.env to try Paystack's own test checkout.
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      PAYSTACK_PLAN_PRO_MONTHLY: ${PAYSTACK_PLAN_PRO_MONTHLY:-}
+      PAYSTACK_PLAN_BUSINESS_MONTHLY: ${PAYSTACK_PLAN_BUSINESS_MONTHLY:-}
     ports: ["4000:4000"] # direct access for Swagger and debugging
     depends_on:
       migrate: { condition: service_completed_successfully }

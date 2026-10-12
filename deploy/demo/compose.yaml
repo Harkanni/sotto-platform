@@ -23,9 +23,9 @@ x-storage-env: &storage-env
   S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
 
 # LABELLED MOCKS on the demo (see the worker below): embeddings are the hash mock, and the api
-# must embed questions with the same one, so Ask runs as keyword search. No chat model: Ask
-# answers with the matching passages, labelled "Passages only". A hosted model is a Phase 6
-# decision (STATUS → Open decisions).
+# must embed questions with the same one, so Ask runs as keyword search. No Private chat model
+# fits on this box: unless a workspace adds its own key (BYOK) or Managed is set up below, Ask
+# answers with the matching passages, labelled "Passages only".
 x-ai-env: &ai-env
   AI_EMBEDDINGS: fake:fake-hash
 
@@ -64,6 +64,21 @@ services:
       <<: [*app-env, *storage-env, *ai-env]
       PORT: "4000"
       ASK_RATE_PER_MINUTE: "10" # a public demo: fewer questions per person per minute
+      # Phase 6 (ADR 0023): wraps each workspace's own AI keys. From SSM
+      # /sotto/demo/AI_KEYS_MASTER (terraform/dev/ssm.tf). Empty → keys can't be saved, and the
+      # AI settings screen says so.
+      AI_KEYS_MASTER: ${AI_KEYS_MASTER:-}
+      # Managed mode (ADR 0024): Sotto's own provider account. Empty until the owner picks the
+      # demo's provider and adds /sotto/demo/AI_MANAGED_CHAT and AI_MANAGED_KEY to SSM.
+      AI_MANAGED_CHAT: ${AI_MANAGED_CHAT:-}
+      AI_MANAGED_KEY: ${AI_MANAGED_KEY:-}
+      # Payments (ADR 0026): no key → the labelled test checkout (nothing charged). A Paystack
+      # *test* key and plan codes in SSM switch to Paystack test mode; live keys are refused.
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      PAYSTACK_PLAN_PRO_MONTHLY: ${PAYSTACK_PLAN_PRO_MONTHLY:-}
+      PAYSTACK_PLAN_PRO_YEARLY: ${PAYSTACK_PLAN_PRO_YEARLY:-}
+      PAYSTACK_PLAN_BUSINESS_MONTHLY: ${PAYSTACK_PLAN_BUSINESS_MONTHLY:-}
+      PAYSTACK_PLAN_BUSINESS_YEARLY: ${PAYSTACK_PLAN_BUSINESS_YEARLY:-}
       AUTH_SECRET: ${AUTH_SECRET}
       # Mailpit until SES (ADR 0015): switch SMTP_URL to SES's SMTP endpoint once sotto.ai exists.
       SMTP_URL: smtp://mailpit:1025
