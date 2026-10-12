@@ -87,12 +87,12 @@ sotto-platform#9 records it as ADR 0023).
 - [ ] **Jenkins builds pull requests.** No Jenkins status appears on the Phase 7 branches yet
       (only GitGuardian), so no PR has a green check to merge on. Each Multibranch Pipeline needs
       branch and PR discovery and a GitHub webhook, and reports a status on the commit.
-- [ ] **What GitHub Actions still did.** `ci.yml` has jobs Jenkins doesn't run: `sync` (commits
-      lockfiles and publishes the `node_modules` snapshot agent sessions restore — needed for any
-      new dependency, e.g. the Meet bot's headless browser), the api's `python`, `ingestion`,
-      `evals`, `smoke` and the web's `stories`, `accounts`, `smoke`. Actions still refuses to run
-      (billing), so they run nowhere. Decide: port them to Jenkins (the agent can write the
-      stages), or fix Actions billing and keep them there, or drop them.
+- [ ] **What GitHub Actions still did.** `ci.yml` has checks Jenkins doesn't run: the api's
+      `python` (transcriber tests), `ingestion`, `evals`, `smoke`, and the web's `stories`,
+      `accounts`, `smoke`. Actions still refuses to run (billing), so they run nowhere. Decide:
+      port them to Jenkins (the agent can write the stages), or fix Actions billing, or drop
+      them. (`sync` is no longer needed: agent sessions can reach the npm registry again as of
+      2026-10-12, so they install and commit lockfiles themselves.)
 - [ ] **Turn off the old deploy.** Disable `images.yml` in both app repos once Jenkins deploys
       `main`, so two systems never deploy at once.
 - [ ] **Merge in order:** sotto-platform#8 (Phase 6 STATUS), then sotto-platform#9 (Jenkins) —
