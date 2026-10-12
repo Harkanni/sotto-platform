@@ -48,13 +48,12 @@ link, passkeys, Google and Microsoft, development and the demo on AWS eu-west-2)
 - **Every PR updates `docs/STATUS.md`** in this repo (open PRs, what's done, next step). A PR in
   sotto-api or sotto-web gets a companion STATUS update here. API + web pairs: the API PR merges
   first.
-- Never commit secrets. Only `.env.example` files. Real values live in local `.env`, GitHub
-  Actions secrets, or AWS SSM Parameter Store (`/sotto/<env>/…`). AWS access for CI uses IAM
+- Never commit secrets. Only `.env.example` files. Real values live in local `.env`, Jenkins
+  credentials, or AWS SSM Parameter Store (`/sotto/<env>/…`). AWS access for CI uses IAM
   access keys (ADR 0007); don't reintroduce OIDC.
 - **CI/CD runs on Jenkins** (ADR 0030) on its own EC2 server, `sotto-jenkins`, reached over SSH.
   Each app repo's `Jenkinsfile` runs the checks and, on `main`, builds the images and deploys the
-  demo through the `sotto-deploy` SSM document. GitHub Actions keeps the heavy `ci.yml` checks;
-  `images.yml` is only a fallback.
+  demo through the `sotto-deploy` SSM document. GitHub Actions is no longer used.
 - Teaching mode: annotate every Dockerfile, Compose file and Terraform file with short "why"
   comments. The owner is learning Cloud/Platform Engineering; phases 9–11 are "guide me" by
   default (task, hints, a way to check — he writes it, the agent reviews).
