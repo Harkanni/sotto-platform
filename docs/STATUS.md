@@ -83,18 +83,21 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
 Consolidated 2026-10-12. CI/CD has moved from GitHub Actions to Jenkins (the owner's decision;
 sotto-platform#9 records it as ADR 0023).
 
-**Blocking merges and deploys** (updated 2026-10-12, late)
+**Blocking merges and deploys** (updated 2026-10-13)
 
-- [ ] **Jenkins reports on PRs**: still no Jenkins status on any branch (only GitGuardian).
-      Branch + PR discovery, a GitHub webhook to `/github-webhook/`, port 8080 open to GitHub.
-- [x] **Checks Actions ran**: ported to Jenkins — sotto-api#11, sotto-web#13, sotto-platform#12
-      (each removes its Actions workflows). Jenkins host needs the Lockable Resources plugin,
-      Playwright's libraries (`sudo npx -y playwright@1 install-deps chromium`), ≥60 GB disk, a
-      `CONFIG_BUCKET` global variable, and a third job for sotto-platform.
-- [x] **ADR numbering**: Jenkins renumbered to 0030 in sotto-platform#9 (mergeable); Phase 7 has
-      0028–0029; the demo host 0031.
-- Merge order: sotto-platform#9 → the three CI PRs (once green on Jenkins) → sotto-platform#11
-  (OIDC removal) and #13 (demo host) → Phase 7 when complete.
+- [ ] **Jenkins can't report to GitHub**: every build logs `Could not update commit status …
+    Resource not accessible by personal access token (403)`. The token in Jenkins credential
+      `github-sotto` needs **Commit statuses: Read and write** (fine-grained) or the `repo` scope
+      (classic), for all three repos. Until then PRs show no Jenkins check.
+- [ ] **sotto-platform `main` is red**: `terraform fmt` on `variables.tf` (fixed in
+      sotto-platform#14).
+- [ ] Merge the CI ports once green: sotto-api#11, sotto-web#13 (sotto-platform#12 is merged).
+- [ ] Jenkins host: Lockable Resources plugin; `sudo npx -y playwright@1 install-deps chromium`;
+      ≥60 GB disk. AWS access is the jenkins user's AWS CLI profile; ECR registry and config
+      bucket are derived from the account (no global variables).
+- Merged: #9 (Jenkins, ADR 0030), #11 (OIDC removed), #12 (platform on Jenkins), #13 (bigger
+  demo). Open: #14 (GPU model server, ADR 0032; needs a GPU quota first), sotto-api#12 (sends the
+  model's thinking-off option).
 
 **For the demo**
 
@@ -102,8 +105,9 @@ sotto-platform#9 records it as ADR 0023).
       redeploy the config. Until then the demo can't store workspace API keys.
 - [ ] Phase 4 upload fix: `terraform apply` (the app's scoped S3 key, bucket CORS and lifecycle),
       if not done yet.
-- [x] Demo's AI: decided — real private AI on m7g.2xlarge (sotto-platform#13, ADR 0031);
-      owner runs `terraform plan`/`apply` and the one-time re-index (steps in the PR).
+- [ ] Demo's AI: app server m7g.2xlarge (ADR 0031, merged) + chat on a g6e.xlarge GPU with
+      Qwen3.6-35B-A3B (ADR 0032, sotto-platform#14). Request the G-instance quota (4 vCPUs,
+      eu-west-2) first; after the first deploy, run the re-index once (steps in #13).
 
 **For features (Phase 3 and 7)**
 
