@@ -4,18 +4,18 @@ What this phase used, why, and some drills to break things on purpose (then fix 
 
 ## Concepts
 
-| Concept | Where you'll find it | Why it matters |
-| --- | --- | --- |
-| Multi-stage Docker builds | `sotto-api/Dockerfile`, `sotto-web/Dockerfile` | Compilers and dev deps stay out of the runtime image: smaller, fewer CVEs |
-| Non-root containers | `USER node`, `USER 10001` | A compromised process can't modify the image or bind privileged ports |
-| Liveness vs readiness | `/healthz` vs `/readyz` | Liveness failures restart a container; readiness failures only stop traffic. Mixing them up causes restart storms |
-| Compose `depends_on` conditions | `local/compose.yaml` | `service_healthy` / `service_completed_successfully` ordering: the api waits for migrations |
-| Reverse proxy, one origin | `Caddyfile` | `/api/*` and `/` on one host means no CORS and simpler cookies |
-| GitHub OIDC → AWS | `terraform/dev/github_oidc.tf` | No long-lived AWS keys in GitHub; tokens are per-run and scoped to `main` |
-| SSM Run Command instead of SSH | `aws_ssm_document.deploy` | No open port 22, every command audited, parameters validated |
-| Remote state with locking | `backend "s3" { use_lockfile = true }` | Two applies can't corrupt state; versioning lets you roll back |
-| IMDSv2 + hop limit 1 | `metadata_options` | Blocks SSRF-style credential theft and keeps containers away from instance credentials |
-| Budgets | `budget.tf` | The cheapest outage is the one that emails you before the bill does |
+| Concept                         | Where you'll find it                               | Why it matters                                                                                                    |
+| ------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Multi-stage Docker builds       | `sotto-api/Dockerfile`, `sotto-web/Dockerfile`     | Compilers and dev deps stay out of the runtime image: smaller, fewer CVEs                                         |
+| Non-root containers             | `USER node`, `USER 10001`                          | A compromised process can't modify the image or bind privileged ports                                             |
+| Liveness vs readiness           | `/healthz` vs `/readyz`                            | Liveness failures restart a container; readiness failures only stop traffic. Mixing them up causes restart storms |
+| Compose `depends_on` conditions | `local/compose.yaml`                               | `service_healthy` / `service_completed_successfully` ordering: the api waits for migrations                       |
+| Reverse proxy, one origin       | `Caddyfile`                                        | `/api/*` and `/` on one host means no CORS and simpler cookies                                                    |
+| ~~GitHub OIDC → AWS~~           | removed (ADR 0007: access keys; CI is now Jenkins) | Was: no long-lived AWS keys in GitHub; tokens per run, scoped to `main`                                           |
+| SSM Run Command instead of SSH  | `aws_ssm_document.deploy`                          | No open port 22, every command audited, parameters validated                                                      |
+| Remote state with locking       | `backend "s3" { use_lockfile = true }`             | Two applies can't corrupt state; versioning lets you roll back                                                    |
+| IMDSv2 + hop limit 1            | `metadata_options`                                 | Blocks SSRF-style credential theft and keeps containers away from instance credentials                            |
+| Budgets                         | `budget.tf`                                        | The cheapest outage is the one that emails you before the bill does                                               |
 
 ## Commands to try
 
