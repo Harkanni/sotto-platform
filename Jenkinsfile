@@ -68,8 +68,9 @@ pipeline {
     }
 
     // What deploy-config.yml did: when deploy/demo changes on main, upload the files to the
-    // config bucket and tell the demo server to re-sync and restart what changed. CONFIG_BUCKET
-    // is a Jenkins global environment variable (`terraform output` prints the bucket).
+    // config bucket and tell the demo server to re-sync and restart what changed. AWS access
+    // comes from the jenkins user's AWS CLI profile (~jenkins/.aws); the bucket name is worked
+    // out from the account (sotto-dev-<account id>) unless CONFIG_BUCKET is set.
     stage('Deploy demo config') {
       when {
         branch 'main'
@@ -77,6 +78,7 @@ pipeline {
       }
       steps {
         sh '''
+          CONFIG_BUCKET="${CONFIG_BUCKET:-sotto-dev-$(aws sts get-caller-identity --query Account --output text)}"
           for f in deploy/demo/*; do
             aws s3 cp "$f" "s3://$CONFIG_BUCKET/demo/$(basename "$f")" --no-progress
           done

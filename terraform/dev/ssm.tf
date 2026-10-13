@@ -64,13 +64,6 @@ resource "aws_ssm_parameter" "ai_keys_master" {
   value = random_bytes.ai_keys_master.base64
 }
 
-# ADR 0031: the Private chat model the demo's Ollama serves (deploy.sh puts it in .env).
-resource "aws_ssm_parameter" "demo_chat_model" {
-  name  = "/sotto/demo/DEMO_CHAT_MODEL"
-  type  = "String"
-  value = var.demo_chat_model
-}
-
 resource "aws_ssm_parameter" "site_address" {
   name  = "/sotto/demo/SITE_ADDRESS"
   type  = "String"
