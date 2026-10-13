@@ -43,8 +43,10 @@ mv .env.next .env
 aws ecr get-login-password --region "$AWS_REGION" |
   docker login --username AWS --password-stdin "$ECR_REGISTRY" > /dev/null
 
-log "starting backing services"
-docker compose up -d --wait postgres redis rabbitmq mailpit caddy
+log "starting backing services (the first start pulls the AI models, a few minutes)"
+# Ollama is healthy only once its models are pulled (ADR 0031), so the api and worker never
+# start against a missing model.
+docker compose up -d --wait --wait-timeout 600 postgres redis rabbitmq mailpit caddy ollama
 # The Caddyfile is a bind mount: pick up edits without dropping connections.
 docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile || true
 

@@ -57,6 +57,8 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
   sotto-platform#8): Private, BYOK and Managed per workspace; envelope-encrypted keys; model
   catalog and Switch model; Restricted proven never to reach outside AI; metering, quotas and
   plans; Paystack test mode behind `PaymentProvider`; embedding re-index. ADRs 0023–0027.
+- CI/CD moved to Jenkins (ADR 0030; sotto-platform#9). Every check now runs in the
+  Jenkinsfiles; GitHub Actions is no longer used.
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step

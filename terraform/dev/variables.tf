@@ -33,14 +33,43 @@ variable "alert_email" {
 }
 
 variable "monthly_budget_usd" {
-  type    = number
-  default = 40
+  description = "Alert threshold. The demo on m7g.2xlarge runs about $300 a month on its own."
+  type        = number
+  default     = 350
 }
 
 variable "demo_instance_type" {
-  description = "ARM (Graviton) is cheaper per GB of RAM. 4 GB fits the demo stack with limits."
+  description = <<-EOT
+    ARM (Graviton), because the images are built for linux/arm64. m7g.2xlarge (8 vCPU, 32 GB)
+    runs the whole stack with real AI: Ollama with an 8B chat model and the embedding model,
+    and faster-whisper, with room to spare (ADR 0031). t4g.medium (4 GB) only fits the
+    labelled mocks.
+  EOT
+  type    = string
+  default = "m7g.2xlarge"
+}
+
+variable "demo_volume_gb" {
+  description = "Root disk: container images, model weights (~6 GB) and the database."
+  type        = number
+  default     = 100
+}
+
+variable "demo_chat_model" {
+  description = "The Private chat model Ollama pulls and serves on the demo."
   type        = string
-  default     = "t4g.medium"
+  default     = "llama3.1:8b"
+}
+
+variable "demo_eip_allocation_id" {
+  description = <<-EOT
+    Optional: an Elastic IP you allocated yourself (eipalloc-...). Terraform then only attaches
+    it and never releases it, so the demo keeps the same address (and sslip.io name, and OAuth
+    redirect URLs) across `terraform destroy` and `apply`. Empty: Terraform allocates one, which
+    a destroy releases.
+  EOT
+  type    = string
+  default = ""
 }
 
 variable "workbench_enabled" {
