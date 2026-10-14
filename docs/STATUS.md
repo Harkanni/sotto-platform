@@ -45,8 +45,8 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
 - CI/CD moved to Jenkins (ADR 0030; sotto-platform#9). Every check now runs in the
   Jenkinsfiles; GitHub Actions is no longer used. A newer push to a branch stops its older
   build (`abortPrevious`; sotto-api, sotto-web and this repo's `chore/jenkins-abort-previous`).
-  The ECR repositories moved to `terraform/keep` (they were deleted with the demo, so `main`
-  had nowhere to push), and each image is built once and pushed as tested.
+  `terraform destroy` removes everything, ECR included: while the demo is down, Jenkins on
+  `main` skips the push and deploy; after `terraform apply`, run **Build** on each app's `main`.
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step

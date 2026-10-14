@@ -1,17 +1,24 @@
-# The image repositories moved to the "keep" stack (terraform/keep/ecr.tf): they lived here, so
-# every `terraform destroy` deleted them, and the next Jenkins build on main had nowhere to push
-# ("repository sotto/api does not exist"). These blocks make this stack forget them without
-# deleting anything, if its state still lists them.
-removed {
-  from = aws_ecr_lifecycle_policy.service
-  lifecycle {
-    destroy = false
+# One image repository per service. CI pushes `sha-<commit>` tags plus a moving `main` tag.
+resource "aws_ecr_repository" "service" {
+  for_each             = toset(local.services)
+  name                 = "sotto/${each.key}"
+  image_tag_mutability = "MUTABLE" # `main` moves; sha tags never change in practice
+  force_delete         = true      # dev only: lets `terraform destroy` remove repos with images
+
+  image_scanning_configuration {
+    scan_on_push = true # free basic scan for known CVEs
   }
 }
 
-removed {
-  from = aws_ecr_repository.service
-  lifecycle {
-    destroy = false
-  }
+resource "aws_ecr_lifecycle_policy" "service" {
+  for_each   = aws_ecr_repository.service
+  repository = each.value.name
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep the 15 most recent images; storage costs money."
+      selection    = { tagStatus = "any", countType = "imageCountMoreThan", countNumber = 15 }
+      action       = { type = "expire" }
+    }]
+  })
 }
