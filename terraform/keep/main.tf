@@ -7,6 +7,8 @@
 #     instead of downloading everything again (ADR 0033).
 #   - the demo's public IP: an Elastic IP, so the sslip.io address (and the OAuth redirect URLs
 #     built on it) stays the same every session.
+#   - the image repositories (ecr.tf): Jenkins pushes to them from main even while the demo is
+#     down, and a new demo pulls the latest images from them.
 #
 # terraform/dev finds both by their Name tags; with this stack absent it works as before.
 #
