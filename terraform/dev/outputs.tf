@@ -40,3 +40,12 @@ output "demo_mail_password" {
   value       = random_password.mailpit.result
   sensitive   = true
 }
+
+output "model_server" {
+  description = "The GPU model server: its private address, and how to watch it start."
+  value = var.model_server_enabled ? {
+    instance_id = aws_instance.model[0].id
+    private_url = "http://${aws_instance.model[0].private_ip}:8000/v1"
+    logs        = "aws ssm start-session --region ${var.region} --target ${aws_instance.model[0].id}  # then: sudo docker logs -f vllm"
+  } : null
+}

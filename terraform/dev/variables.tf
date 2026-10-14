@@ -41,12 +41,11 @@ variable "monthly_budget_usd" {
 variable "demo_instance_type" {
   description = <<-EOT
     ARM (Graviton), because the images are built for linux/arm64. m7g.2xlarge (8 vCPU, 32 GB)
-    runs the whole stack with real AI: Ollama with an 8B chat model and the embedding model,
-    and faster-whisper, with room to spare (ADR 0031). t4g.medium (4 GB) only fits the
-    labelled mocks.
+    runs the app, the embedding model and faster-whisper; the chat model has its own GPU
+    server (model.tf, ADR 0032). t4g.medium (4 GB) only fits the labelled mocks.
   EOT
-  type    = string
-  default = "m7g.2xlarge"
+  type        = string
+  default     = "m7g.2xlarge"
 }
 
 variable "demo_volume_gb" {
@@ -55,11 +54,6 @@ variable "demo_volume_gb" {
   default     = 100
 }
 
-variable "demo_chat_model" {
-  description = "The Private chat model Ollama pulls and serves on the demo."
-  type        = string
-  default     = "llama3.1:8b"
-}
 
 variable "demo_eip_allocation_id" {
   description = <<-EOT
@@ -68,8 +62,8 @@ variable "demo_eip_allocation_id" {
     redirect URLs) across `terraform destroy` and `apply`. Empty: Terraform allocates one, which
     a destroy releases.
   EOT
-  type    = string
-  default = ""
+  type        = string
+  default     = ""
 }
 
 variable "workbench_enabled" {
@@ -87,4 +81,39 @@ variable "domain" {
   description = "Leave empty until sotto.ai is bought; the demo then uses <ip>.sslip.io."
   type        = string
   default     = ""
+}
+
+# ── The private chat model on its own GPU server (model.tf, ADR 0032) ──────────────────────
+
+variable "model_server_enabled" {
+  description = "Run the GPU model server. Off: the demo answers with passages only (no chat model)."
+  type        = bool
+  default     = true
+}
+
+variable "model_instance_type" {
+  description = <<-EOT
+    One NVIDIA L40S (48 GB) on g6e.xlarge: room for the model in FP8 plus a long context.
+    Needs the "Running On-Demand G and VT instances" quota (4 vCPUs) in this region.
+  EOT
+  type        = string
+  default     = "g6e.xlarge"
+}
+
+variable "model_hf_id" {
+  description = "The Hugging Face model vLLM serves (FP8 weights fit the L40S)."
+  type        = string
+  default     = "Qwen/Qwen3.6-35B-A3B-FP8"
+}
+
+variable "model_max_len" {
+  description = "Longest prompt + answer in tokens. Ask sends ~8 passages; 32K is plenty and fast."
+  type        = number
+  default     = 32768
+}
+
+variable "vllm_image" {
+  description = "vLLM's OpenAI-compatible server image. Qwen3.6 needs vLLM 0.19 or later."
+  type        = string
+  default     = "vllm/vllm-openai:latest"
 }
