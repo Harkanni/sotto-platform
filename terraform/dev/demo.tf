@@ -149,23 +149,35 @@ resource "aws_instance" "demo" {
 }
 
 # A fixed public IP, so the sslip.io name (and later the DNS record) never changes while the
-# instance stops and starts. Terraform's own EIP is released by `terraform destroy`; to keep one
-# address for good, allocate an EIP yourself and set demo_eip_allocation_id (it's then only
-# attached, never released).
+# instance stops and starts. Which one, in order: demo_eip_allocation_id if set; else the
+# "keep" stack's EIP (terraform/keep, tagged sotto-demo-kept), which survives `terraform
+# destroy` here; else one this stack allocates (and a destroy releases).
+data "aws_eips" "kept" {
+  filter {
+    name   = "tag:Name"
+    values = ["sotto-demo-kept"]
+  }
+}
+
+locals {
+  kept_eip_id = var.demo_eip_allocation_id != "" ? var.demo_eip_allocation_id : try(data.aws_eips.kept.allocation_ids[0], "")
+  own_eip     = local.kept_eip_id == ""
+}
+
 resource "aws_eip" "demo" {
-  count  = var.demo_eip_allocation_id == "" ? 1 : 0
+  count  = local.own_eip ? 1 : 0
   domain = "vpc"
   tags   = { Name = "sotto-demo" }
 }
 
 data "aws_eip" "kept" {
-  count = var.demo_eip_allocation_id == "" ? 0 : 1
-  id    = var.demo_eip_allocation_id
+  count = local.own_eip ? 0 : 1
+  id    = local.kept_eip_id
 }
 
 locals {
-  demo_eip_id    = var.demo_eip_allocation_id == "" ? aws_eip.demo[0].id : data.aws_eip.kept[0].id
-  demo_public_ip = var.demo_eip_allocation_id == "" ? aws_eip.demo[0].public_ip : data.aws_eip.kept[0].public_ip
+  demo_eip_id    = local.own_eip ? aws_eip.demo[0].id : data.aws_eip.kept[0].id
+  demo_public_ip = local.own_eip ? aws_eip.demo[0].public_ip : data.aws_eip.kept[0].public_ip
 }
 
 resource "aws_eip_association" "demo" {
