@@ -86,11 +86,13 @@ sotto-platform#9 records it as ADR 0023).
 **Blocking merges and deploys** (updated 2026-10-13)
 
 - [ ] **Jenkins can't report to GitHub**: every build logs `Could not update commit status …
-    Resource not accessible by personal access token (403)`. The token in Jenkins credential
+  Resource not accessible by personal access token (403)`. The token in Jenkins credential
       `github-sotto` needs **Commit statuses: Read and write** (fine-grained) or the `repo` scope
       (classic), for all three repos. Until then PRs show no Jenkins check.
-- [ ] **sotto-platform `main` is red**: `terraform fmt` on `variables.tf` (fixed in
-      sotto-platform#14).
+- [x] sotto-platform `main` fmt fixed (#14, merged).
+- [ ] sotto-platform#15: security group description AWS refused (blocks `terraform apply`), and
+      the keep stack (model cache + fixed IP, ADR 0033). Apply `terraform/keep` once.
+- [ ] Jenkins token: fine-grained **Commit statuses: Read and write** (it is read-only now).
 - [ ] Merge the CI ports once green: sotto-api#11, sotto-web#13 (sotto-platform#12 is merged).
 - [ ] Jenkins host: Lockable Resources plugin; `sudo npx -y playwright@1 install-deps chromium`;
       ≥60 GB disk. AWS access is the jenkins user's AWS CLI profile; ECR registry and config
