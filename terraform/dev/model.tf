@@ -48,9 +48,9 @@ data "aws_subnets" "model" {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
+  # "none" when no zone offers the type: an empty filter would match every subnet.
   filter {
     name   = "availability-zone"
-    # "none" when no zone offers the type: an empty filter would match every subnet.
     values = local.model_cached ? [data.aws_ebs_volume.model_cache[0].availability_zone] : coalescelist(data.aws_ec2_instance_type_offerings.model.locations, ["none"])
   }
 }
