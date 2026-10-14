@@ -47,6 +47,8 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
   build (`abortPrevious`; sotto-api, sotto-web and this repo's `chore/jenkins-abort-previous`).
   `terraform destroy` removes everything, ECR included: while the demo is down, Jenkins on
   `main` skips the push and deploy; after `terraform apply`, run **Build** on each app's `main`.
+- The GPU model server is now off by default (`model_server_enabled = false`): it needs the GPU
+  quota and a zone offering `model_instance_type`; a clear error replaces the old crash.
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step

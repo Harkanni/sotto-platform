@@ -50,7 +50,8 @@ data "aws_subnets" "model" {
   }
   filter {
     name   = "availability-zone"
-    values = local.model_cached ? [data.aws_ebs_volume.model_cache[0].availability_zone] : data.aws_ec2_instance_type_offerings.model.locations
+    # "none" when no zone offers the type: an empty filter would match every subnet.
+    values = local.model_cached ? [data.aws_ebs_volume.model_cache[0].availability_zone] : coalescelist(data.aws_ec2_instance_type_offerings.model.locations, ["none"])
   }
 }
 
@@ -133,7 +134,7 @@ resource "aws_instance" "model" {
   count                  = var.model_server_enabled ? 1 : 0
   ami                    = data.aws_ssm_parameter.gpu_ami.value
   instance_type          = var.model_instance_type
-  subnet_id              = data.aws_subnets.model.ids[0]
+  subnet_id              = try(data.aws_subnets.model.ids[0], null)
   vpc_security_group_ids = [aws_security_group.model[0].id]
   iam_instance_profile   = aws_iam_instance_profile.model[0].name
 
@@ -161,6 +162,13 @@ resource "aws_instance" "model" {
     throughput  = local.model_cached ? 125 : 500
     iops        = local.model_cached ? 3000 : 6000
     encrypted   = true
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(data.aws_subnets.model.ids) > 0
+      error_message = "No availability zone in this region offers ${var.model_instance_type} (or the model cache's zone doesn't). Pick another model_instance_type, or set model_server_enabled = false."
+    }
   }
 
   tags = {

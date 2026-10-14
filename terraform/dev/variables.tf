@@ -86,9 +86,13 @@ variable "domain" {
 # ── The private chat model on its own GPU server (model.tf, ADR 0032) ──────────────────────
 
 variable "model_server_enabled" {
-  description = "Run the GPU model server. Off: the demo answers with passages only (no chat model)."
+  description = <<-EOT
+    Run the GPU model server. Off by default: it needs the GPU quota and a zone that offers
+    model_instance_type. Turn it on with -var model_server_enabled=true (or terraform.tfvars).
+    Off: the demo answers with passages only (no chat model).
+  EOT
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "model_instance_type" {

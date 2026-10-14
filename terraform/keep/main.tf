@@ -74,7 +74,7 @@ data "aws_ec2_instance_type_offerings" "model" {
 }
 
 resource "aws_ebs_volume" "model_cache" {
-  availability_zone = sort(data.aws_ec2_instance_type_offerings.model.locations)[0]
+  availability_zone = try(sort(data.aws_ec2_instance_type_offerings.model.locations)[0], null)
   type              = "gp3"
   size              = var.model_cache_gb
   throughput        = var.model_cache_throughput
@@ -82,6 +82,13 @@ resource "aws_ebs_volume" "model_cache" {
   encrypted         = true
 
   tags = { Name = "sotto-model-cache" }
+
+  lifecycle {
+    precondition {
+      condition     = length(data.aws_ec2_instance_type_offerings.model.locations) > 0
+      error_message = "No availability zone in this region offers ${var.model_instance_type}. Pick another model_instance_type."
+    }
+  }
 }
 
 resource "aws_eip" "demo" {
