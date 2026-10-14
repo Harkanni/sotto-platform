@@ -10,7 +10,8 @@ pipeline {
 
   options {
     timeout(time: 20, unit: 'MINUTES')
-    disableConcurrentBuilds()
+    // A newer push to the same branch or PR stops the older build: nobody needs its result.
+    disableConcurrentBuilds(abortPrevious: true)
     buildDiscarder(logRotator(numToKeepStr: '30'))
   }
 
