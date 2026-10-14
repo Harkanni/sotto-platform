@@ -44,3 +44,12 @@ smoke, the 30-minute ingestion check, the eval set, stories, end-to-end, the acc
 gitleaks) moved into the Jenkinsfiles, and `ci.yml` and `images.yml` were removed
 (sotto-api and sotto-web `chore/jenkins-full-ci`). The api and web pipelines share the host's
 ports, so both take a `sotto-ci-host` lock (Lockable Resources plugin).
+
+## Update, 2026-10-14
+
+Builds run side by side. The `sotto-ci-host` lock is gone: each build takes a slot from its
+Jenkins executor number, and every host port moves by 20 per slot (slot 0 keeps 5432, 4000,
+3000…), with container, network, volume and image names carrying the slot. Inside a build,
+independent stages run in parallel. The node keeps 5 executors or fewer so ports never overlap.
+The Jenkins host grew to a `c7g.4xlarge` (16 vCPUs) for this. `main` skips the image push and
+deploy while the demo is destroyed (`terraform destroy` removes ECR too).
