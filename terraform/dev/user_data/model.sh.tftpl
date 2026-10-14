@@ -1,0 +1,35 @@
+#!/bin/bash
+# The model server's first boot (ADR 0032): start vLLM with the chat model. The Deep Learning
+# AMI already has the NVIDIA driver, Docker and the NVIDIA container toolkit. The first start
+# downloads the image (~10 GB) and the weights (~37 GB): ready in about 10–15 minutes.
+# Progress: `sudo docker logs -f vllm` (Session Manager), or /var/log/sotto-model.log.
+set -euo pipefail
+exec > >(tee -a /var/log/sotto-model.log) 2>&1
+
+echo "waiting for the GPU"
+for i in $(seq 1 60); do nvidia-smi >/dev/null 2>&1 && break; sleep 5; done
+nvidia-smi --query-gpu=name,memory.total --format=csv
+
+# The AMI ships the AWS CLI; install it if a future image doesn't.
+command -v aws >/dev/null || snap install aws-cli --classic
+KEY=$(aws ssm get-parameter --region "${region}" --name "${key_param}" --with-decryption \
+  --query Parameter.Value --output text)
+
+mkdir -p /opt/models
+docker rm -f vllm >/dev/null 2>&1 || true
+# --served-model-name: the app asks for "sotto-chat", whatever model sits behind it.
+# --enable-prefix-caching: Ask's system prompt and follow-ups reuse earlier work, so later
+#   answers start faster.
+# --reasoning-parser qwen3: if the model ever reasons, that text stays out of the answer.
+docker run -d --name vllm --restart unless-stopped --gpus all --ipc=host \
+  -p 8000:8000 -v /opt/models:/root/.cache/huggingface \
+  "${vllm_image}" \
+  --model "${model}" \
+  --served-model-name sotto-chat \
+  --max-model-len "${max_len}" \
+  --gpu-memory-utilization 0.92 \
+  --enable-prefix-caching \
+  --reasoning-parser qwen3 \
+  --api-key "$KEY"
+
+echo "vLLM starting; it answers on :8000 once the weights are loaded"
