@@ -51,6 +51,7 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
   slot from its executor number. Set the Jenkins node to 3 executors (5 at most).
 - The GPU model server is now off by default (`model_server_enabled = false`): it needs the GPU
   quota and a zone offering `model_instance_type`; a clear error replaces the old crash.
+  (`fix/terraform-fmt-model`: a comment broke `terraform fmt` alignment in `model.tf`.)
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step
