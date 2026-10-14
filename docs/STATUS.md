@@ -5,7 +5,7 @@
 **Updated:** 2026-10-10 (Phase 6 complete)
 **Current phase:** 6 — AI modes, providers and billing (complete, PRs ready for review)
 
-**Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
+**Demo:** deployed from `main` by Jenkins: each app's `Build and push image` → `Deploy to demo` stages, after every check passes (`terraform output demo_url` prints the address)
 
 ## Ready for review: Phase 6 (AI modes, providers and billing)
 
@@ -43,7 +43,14 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
   catalog and Switch model; Restricted proven never to reach outside AI; metering, quotas and
   plans; Paystack test mode behind `PaymentProvider`; embedding re-index. ADRs 0023–0027.
 - CI/CD moved to Jenkins (ADR 0030; sotto-platform#9). Every check now runs in the
-  Jenkinsfiles; GitHub Actions is no longer used.
+  Jenkinsfiles; GitHub Actions is no longer used. A newer push to a branch stops its older
+  build (`abortPrevious`; sotto-api, sotto-web and this repo's `chore/jenkins-abort-previous`).
+  `terraform destroy` removes everything, ECR included: while the demo is down, Jenkins on
+  `main` skips the push and deploy; after `terraform apply`, run **Build** on each app's `main`.
+- Jenkins builds run side by side (ADR 0030 update): no shared lock; each build gets a port
+  slot from its executor number. Set the Jenkins node to 3 executors (5 at most).
+- The GPU model server is now off by default (`model_server_enabled = false`): it needs the GPU
+  quota and a zone offering `model_instance_type`; a clear error replaces the old crash.
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step

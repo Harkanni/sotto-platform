@@ -1,6 +1,6 @@
 // sotto-platform on Jenkins (ADR 0030): what GitHub Actions' ci.yml and deploy-config.yml did.
 // Terraform, shellcheck and Caddy run in containers, so the host needs only Docker (with the
-// compose plugin), the AWS CLI and the Lockable Resources plugin.
+// compose plugin) and the AWS CLI.
 //
 // Terraform formatting is checked, not fixed: run `terraform fmt -recursive terraform` before
 // pushing (or read the diff this prints and apply it).
@@ -10,7 +10,8 @@ pipeline {
 
   options {
     timeout(time: 20, unit: 'MINUTES')
-    disableConcurrentBuilds()
+    // A newer push to the same branch or PR stops the older build: nobody needs its result.
+    disableConcurrentBuilds(abortPrevious: true)
     buildDiscarder(logRotator(numToKeepStr: '30'))
   }
 
