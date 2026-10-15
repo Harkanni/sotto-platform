@@ -50,6 +50,8 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
 - One Terraform stack (2026-10-15, `chore/single-stack`): `terraform/keep` is gone; `apply`
   brings everything up and `destroy` takes everything down, the demo's IP included (ADR 0033
   superseded). If `terraform/keep` was ever applied, destroy it first.
+- `fix/ci-format-readme` (sotto-web) and `fix/ci-parallel-exit-code` (sotto-api): README
+  formatted (web `main` failed `format:check`); a failing parallel check now reports its exit code.
 - Jenkins builds run side by side (ADR 0030 update): no shared lock; each build gets a port
   slot from its executor number. Set the Jenkins node to 3 executors (5 at most).
 - The GPU model server is now off by default (`model_server_enabled = false`): it needs the GPU
