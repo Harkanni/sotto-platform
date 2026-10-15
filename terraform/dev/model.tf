@@ -11,30 +11,8 @@ data "aws_ssm_parameter" "gpu_ami" {
   name = "/aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-ubuntu-22.04/latest/ami-id"
 }
 
-# The model cache from the "keep" stack (terraform/keep, ADR 0033), if it exists: images and
-# weights that survive `terraform destroy`, so a new model server starts in minutes.
-data "aws_ebs_volumes" "model_cache" {
-  filter {
-    name   = "tag:Name"
-    values = ["sotto-model-cache"]
-  }
-}
-
-data "aws_ebs_volume" "model_cache" {
-  count = length(data.aws_ebs_volumes.model_cache.ids) > 0 ? 1 : 0
-  filter {
-    name   = "volume-id"
-    values = [data.aws_ebs_volumes.model_cache.ids[0]]
-  }
-}
-
-locals {
-  model_cache_id = try(data.aws_ebs_volume.model_cache[0].id, "")
-  model_cached   = local.model_cache_id != ""
-}
-
-# Not every availability zone has every GPU type: pick a zone that offers it (the cache's zone
-# when there's a cache: a volume only attaches in its own zone), then the default subnet there.
+# Not every availability zone has every GPU type: pick a zone that offers it, then the default
+# subnet there.
 data "aws_ec2_instance_type_offerings" "model" {
   location_type = "availability-zone"
   filter {
@@ -51,7 +29,7 @@ data "aws_subnets" "model" {
   # "none" when no zone offers the type: an empty filter would match every subnet.
   filter {
     name   = "availability-zone"
-    values = local.model_cached ? [data.aws_ebs_volume.model_cache[0].availability_zone] : coalescelist(data.aws_ec2_instance_type_offerings.model.locations, ["none"])
+    values = coalescelist(data.aws_ec2_instance_type_offerings.model.locations, ["none"])
   }
 }
 
@@ -144,7 +122,6 @@ resource "aws_instance" "model" {
     model      = var.model_hf_id
     max_len    = var.model_max_len
     vllm_image = var.vllm_image
-    cache_id   = local.model_cache_id
   })
   # A changed model or image means a fresh server: simplest way to apply it.
   user_data_replace_on_change = true
@@ -154,20 +131,21 @@ resource "aws_instance" "model" {
     http_put_response_hop_limit = 2 # the host reads its key; containers don't need the role
   }
 
-  # With the cache, images and weights live there and the root disk stays small. Without it,
-  # the root disk holds them (~60 GB) and is fast, because loading the weights is disk-bound.
+  # The root disk holds the image and the weights (~60 GB) and is fast, because loading the
+  # weights is disk-bound. Everything goes with `terraform destroy`; each new server downloads
+  # them again (~10 minutes).
   root_block_device {
     volume_type = "gp3"
-    volume_size = local.model_cached ? 60 : 200
-    throughput  = local.model_cached ? 125 : 500
-    iops        = local.model_cached ? 3000 : 6000
+    volume_size = 200
+    throughput  = 500
+    iops        = 6000
     encrypted   = true
   }
 
   lifecycle {
     precondition {
       condition     = length(data.aws_subnets.model.ids) > 0
-      error_message = "No availability zone in this region offers ${var.model_instance_type} (or the model cache's zone doesn't). Pick another model_instance_type, or set model_server_enabled = false."
+      error_message = "No availability zone in this region offers ${var.model_instance_type}. Pick another model_instance_type, or set model_server_enabled = false."
     }
   }
 
@@ -175,16 +153,6 @@ resource "aws_instance" "model" {
     Name       = "sotto-model"
     sotto-role = "model"
   }
-}
-
-resource "aws_volume_attachment" "model_cache" {
-  count       = var.model_server_enabled && local.model_cached ? 1 : 0
-  device_name = "/dev/sdf"
-  volume_id   = local.model_cache_id
-  instance_id = aws_instance.model[0].id
-
-  # Stop the server before detaching on destroy, so the cache is never left half-written.
-  stop_instance_before_detaching = true
 }
 
 # What the app needs to reach it. deploy.sh writes these into the demo's .env.

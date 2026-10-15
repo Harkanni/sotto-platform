@@ -39,13 +39,6 @@ tasks:
       - terraform init
       - terraform apply
 
-  tf:keep:
-    desc: Once — the model cache and the demo's fixed IP, which survive destroying terraform/dev (ADR 0033)
-    dir: terraform/keep
-    cmds:
-      - terraform init -backend-config=../dev/backend.hcl
-      - terraform apply
-
   tf:plan:
     desc: Preview changes to the dev environment (demo + workbench)
     dir: terraform/dev

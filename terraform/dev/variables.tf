@@ -54,18 +54,6 @@ variable "demo_volume_gb" {
   default     = 100
 }
 
-
-variable "demo_eip_allocation_id" {
-  description = <<-EOT
-    Optional: an Elastic IP you allocated yourself (eipalloc-...). Terraform then only attaches
-    it and never releases it, so the demo keeps the same address (and sslip.io name, and OAuth
-    redirect URLs) across `terraform destroy` and `apply`. Empty: Terraform allocates one, which
-    a destroy releases.
-  EOT
-  type        = string
-  default     = ""
-}
-
 variable "workbench_enabled" {
   description = "Create the on-demand workbench (8 GB) for Private-mode models and Kubernetes practice."
   type        = bool
