@@ -148,45 +148,21 @@ resource "aws_instance" "demo" {
   depends_on = [aws_s3_object.demo_config, aws_ssm_parameter.postgres_password, aws_ssm_parameter.rabbitmq_password]
 }
 
-# A fixed public IP, so the sslip.io name (and later the DNS record) never changes while the
-# instance stops and starts. Which one, in order: demo_eip_allocation_id if set; else the
-# "keep" stack's EIP (terraform/keep, tagged sotto-demo-kept), which survives `terraform
-# destroy` here; else one this stack allocates (and a destroy releases).
-data "aws_eips" "kept" {
-  filter {
-    name   = "tag:Name"
-    values = ["sotto-demo-kept"]
-  }
-}
-
-locals {
-  kept_eip_id = var.demo_eip_allocation_id != "" ? var.demo_eip_allocation_id : try(data.aws_eips.kept.allocation_ids[0], "")
-  own_eip     = local.kept_eip_id == ""
-}
-
+# A fixed public IP while the stack is up, so the sslip.io name doesn't change when the server
+# stops and starts. It belongs to this stack: `terraform destroy` releases it with everything
+# else, and the next apply gets a new one (and a new sslip.io name) until a real domain arrives.
 resource "aws_eip" "demo" {
-  count  = local.own_eip ? 1 : 0
   domain = "vpc"
   tags   = { Name = "sotto-demo" }
 }
 
-data "aws_eip" "kept" {
-  count = local.own_eip ? 0 : 1
-  id    = local.kept_eip_id
-}
-
-locals {
-  demo_eip_id    = local.own_eip ? aws_eip.demo[0].id : data.aws_eip.kept[0].id
-  demo_public_ip = local.own_eip ? aws_eip.demo[0].public_ip : data.aws_eip.kept[0].public_ip
-}
-
 resource "aws_eip_association" "demo" {
   instance_id   = aws_instance.demo.id
-  allocation_id = local.demo_eip_id
+  allocation_id = aws_eip.demo.id
 }
 
-# Moving the existing EIP into the counted resource without releasing it.
+# Earlier versions counted it (aws_eip.demo[0]); move it back without releasing it.
 moved {
-  from = aws_eip.demo
-  to   = aws_eip.demo[0]
+  from = aws_eip.demo[0]
+  to   = aws_eip.demo
 }

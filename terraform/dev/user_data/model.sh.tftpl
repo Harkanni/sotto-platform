@@ -1,8 +1,7 @@
 #!/bin/bash
 # The model server's first boot (ADR 0032): start vLLM with the chat model. The Deep Learning
 # AMI already has the NVIDIA driver, Docker and the NVIDIA container toolkit. The first start
-# downloads the image (~10 GB) and the weights (~37 GB): ready in about 10–15 minutes. With the
-# model cache attached, later servers find both there and are ready in about 3–5 minutes.
+# downloads the image (~10 GB) and the weights (~37 GB): ready in about 10–15 minutes.
 # Progress: `sudo docker logs -f vllm` (Session Manager), or /var/log/sotto-model.log.
 set -euo pipefail
 exec > >(tee -a /var/log/sotto-model.log) 2>&1
@@ -16,38 +15,7 @@ command -v aws >/dev/null || snap install aws-cli --classic
 KEY=$(aws ssm get-parameter --region "${region}" --name "${key_param}" --with-decryption \
   --query Parameter.Value --output text)
 
-# The model cache (terraform/keep, ADR 0033): Docker's images and the weights on a volume that
-# outlives this server. Attached just after boot, so wait for it; formatted on first use only.
 MODELS=/opt/models
-CACHE_ID="${cache_id}"
-if [ -n "$CACHE_ID" ]; then
-  DEV="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_$(echo "$CACHE_ID" | tr -d -)"
-  echo "waiting for the model cache $CACHE_ID"
-  for i in $(seq 1 120); do [ -e "$DEV" ] && break; sleep 5; done
-  if [ -e "$DEV" ]; then
-    blkid "$DEV" >/dev/null 2>&1 || mkfs.ext4 -q -L sotto-cache "$DEV"
-    mkdir -p /opt/keep
-    mountpoint -q /opt/keep || mount "$DEV" /opt/keep
-    grep -q sotto-cache /etc/fstab || echo "LABEL=sotto-cache /opt/keep ext4 defaults,nofail 0 2" >> /etc/fstab
-    mkdir -p /opt/keep/models /opt/keep/docker
-    MODELS=/opt/keep/models
-    # Docker's images on the cache too, so the vLLM image isn't pulled again. The AMI's
-    # daemon.json (the NVIDIA runtime) is kept; only data-root is added.
-    systemctl stop docker docker.socket
-    python3 - <<'PY'
-import json, os
-p = "/etc/docker/daemon.json"
-cfg = json.load(open(p)) if os.path.exists(p) else {}
-cfg["data-root"] = "/opt/keep/docker"
-json.dump(cfg, open(p, "w"), indent=2)
-PY
-    systemctl start docker
-    echo "model cache mounted: $(df -h /opt/keep | tail -1)"
-  else
-    echo "model cache didn't attach; downloading to the root disk instead"
-  fi
-fi
-
 mkdir -p "$MODELS"
 docker rm -f vllm >/dev/null 2>&1 || true
 # --served-model-name: the app asks for "sotto-chat", whatever model sits behind it.

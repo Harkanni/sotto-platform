@@ -1,6 +1,6 @@
 # 0033 — A "keep" stack holds what survives `terraform destroy`: the model cache and the IP
 
-- **Status:** accepted
+- **Status:** superseded (2026-10-15): one stack; `terraform destroy` removes everything
 - **Date:** 2026-10-14
 
 ## Context
@@ -26,3 +26,11 @@ demo's Elastic IP changes, which changes the sslip.io address and breaks the OAu
 - A new model server is ready in ~3–5 minutes instead of ~10–15.
 - The cache is formatted on first use; a volume that's still attached elsewhere (a server that
   wasn't destroyed) makes the new one fall back to downloading to its root disk.
+
+## Superseded, 2026-10-15
+
+The owner wants one stack: `terraform apply` brings everything up and `terraform destroy` takes
+everything down, with nothing left behind to remember. `terraform/keep` is removed. The demo's
+Elastic IP belongs to `terraform/dev` again (a destroy releases it, so the sslip.io name and the
+OAuth redirect URLs change each session until a real domain arrives), and a new GPU server
+downloads the image and weights again (~10 minutes).

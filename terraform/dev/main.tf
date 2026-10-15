@@ -31,5 +31,5 @@ locals {
   ecr_registry = "${local.account_id}.dkr.ecr.${var.region}.amazonaws.com"
   bucket_name  = "sotto-dev-${local.account_id}"
   services     = ["web", "api", "worker", "transcriber"]
-  site_address = var.domain != "" ? "demo.${var.domain}" : "${replace(local.demo_public_ip, ".", "-")}.sslip.io"
+  site_address = var.domain != "" ? "demo.${var.domain}" : "${replace(aws_eip.demo.public_ip, ".", "-")}.sslip.io"
 }

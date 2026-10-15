@@ -32,7 +32,7 @@ pipeline {
     stage('Terraform') {
       steps {
         sh '''
-          for stack in bootstrap keep dev; do
+          for stack in bootstrap dev; do
             echo "== terraform/$stack"
             docker run --rm -v "$PWD/terraform/$stack:/tf" -w /tf --entrypoint sh "$TF_IMAGE" -c '
               set -e
