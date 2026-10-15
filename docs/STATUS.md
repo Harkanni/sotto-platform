@@ -52,6 +52,8 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
   superseded). If `terraform/keep` was ever applied, destroy it first.
 - `fix/ci-format-readme` (sotto-web) and `fix/ci-parallel-exit-code` (sotto-api): README
   formatted (web `main` failed `format:check`); a failing parallel check now reports its exit code.
+- `fix/onboarding-ai-mode-a11y` (sotto-web): the onboarding step dots no longer put an
+  `aria-label` on a `<p>` (axe failed the accounts flow on web `main`).
 - Jenkins builds run side by side (ADR 0030 update): no shared lock; each build gets a port
   slot from its executor number. Set the Jenkins node to 3 executors (5 at most).
 - The GPU model server is now off by default (`model_server_enabled = false`): it needs the GPU
