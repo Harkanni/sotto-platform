@@ -50,6 +50,9 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
 - One Terraform stack (2026-10-15, `chore/single-stack`): `terraform/keep` is gone; `apply`
   brings everything up and `destroy` takes everything down, the demo's IP included (ADR 0033
   superseded). If `terraform/keep` was ever applied, destroy it first.
+- `fix/accounts-flow-ci` (sotto-web): the accounts flow prints the api's logs on failure
+  (they were removed first) and gives the sample-content load 30 s. It passes 7/7 locally
+  against api `main`.
 - Jenkins builds run side by side (ADR 0030 update): no shared lock; each build gets a port
   slot from its executor number. Set the Jenkins node to 3 executors (5 at most).
 - The GPU model server is now off by default (`model_server_enabled = false`): it needs the GPU
