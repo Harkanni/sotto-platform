@@ -7,23 +7,20 @@
 
 **Demo:** deployed from `main` by Jenkins: each app's `Build and push image` → `Deploy to demo` stages, after every check passes (`terraform output demo_url` prints the address)
 
-## In progress: sotto-web's Accounts flow on Jenkins (2026-10-15)
+## In progress: the demo's mailbox in browsers that opened Sotto (2026-10-15)
 
-`main`'s Accounts flow failed because RabbitMQ never came up in the stage: the wait loop gave up
-silently after 60 failed pings, the api started without a broker, and every sample-content load
-returned 500 `ECONNREFUSED` on the queue publish (the test showed it as a 30 s page timeout).
+`/mail/` (Mailpit behind a password) loaded its 401 over and over in Chrome and Firefox: the
+app's service worker answered every page on the origin except `/api/`, and browsers don't show
+the password prompt for a response that came through a worker. Browsers that had never opened
+Sotto worked.
 
-| Repo           | Branch                         | PR                | State                                                                                                                                                              |
-| -------------- | ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| sotto-web      | `fix/accounts-flow-rabbitmq`   | sotto-web#18      | Draft: healthchecked Compose stack, `/readyz` gate, failure diagnostics; standalone server for browser tests, steadier story tests, quieter logs; awaiting Jenkins |
-| sotto-api      | `fix/ci-pin-gitleaks`          | sotto-api#15      | Draft: secrets scan pinned to gitleaks v8.30.1                                                                                                                     |
-| sotto-platform | `docs/ci-accounts-flow-status` | sotto-platform#20 | Draft: this STATUS; secrets scan pinned to gitleaks v8.30.1                                                                                                        |
+| Repo           | Branch                   | PR           | State                                                                |
+| -------------- | ------------------------ | ------------ | -------------------------------------------------------------------- |
+| sotto-web      | `fix/sw-leave-mailbox`   | sotto-web#19 | Draft: the worker leaves `/api` and `/mail` to the browser; e2e test |
+| sotto-platform | `docs/sw-mailbox-status` | this PR      | Draft: this STATUS                                                   |
 
-No merge order: none depends on another. Handoff log: `sotto-web/CI_PROGRESS.md` (diagnosis,
-changes, checks, next steps). Next step: the owner lets Jenkins build sotto-web#18; if Accounts
-flow still fails, the new `===== accounts stack` block in the log names the service and why
-(OOM kill, unhealthy, exit code). Deferred, cosmetic: Prisma's OpenSSL warning in the api image
-(migrations apply; approach in the log).
+Next step: the owner lets Jenkins build sotto-web#19 and merges it. Until a browser picks up the
+new worker (the app's "Reload" toast), clearing the site's data there fixes `/mail/`.
 
 ## Ready for review: Phase 6 (AI modes, providers and billing)
 
@@ -71,6 +68,12 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
 - `fix/accounts-flow-ci` (sotto-web): the accounts flow prints the api's logs on failure
   (they were removed first) and gives the sample-content load 30 s. It passes 7/7 locally
   against api `main`.
+- CI fixes merged (2026-10-15; sotto-web#18, sotto-api#15, sotto-platform#20): the Accounts flow
+  waits for a healthchecked Compose stack and the api's `/readyz`, and prints each service's
+  state and logs on failure (RabbitMQ never came up; the old wait loop failed silently); browser
+  tests run the standalone server; steadier story tests; quieter logs; gitleaks pinned to
+  v8.30.1. `main` built green and deployed. Log: `sotto-web/CI_PROGRESS.md`. Deferred,
+  cosmetic: Prisma's OpenSSL warning in the api image (approach in that log).
 - Jenkins builds run side by side (ADR 0030 update): no shared lock; each build gets a port
   slot from its executor number. Set the Jenkins node to 3 executors (5 at most).
 - The GPU model server is now off by default (`model_server_enabled = false`): it needs the GPU
