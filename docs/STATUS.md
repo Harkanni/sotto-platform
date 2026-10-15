@@ -7,6 +7,24 @@
 
 **Demo:** deployed from `main` by Jenkins: each app's `Build and push image` → `Deploy to demo` stages, after every check passes (`terraform output demo_url` prints the address)
 
+## In progress: sotto-web's Accounts flow on Jenkins (2026-10-15)
+
+`main`'s Accounts flow failed because RabbitMQ never came up in the stage: the wait loop gave up
+silently after 60 failed pings, the api started without a broker, and every sample-content load
+returned 500 `ECONNREFUSED` on the queue publish (the test showed it as a 30 s page timeout).
+
+| Repo           | Branch                         | PR                | State                                                                                                                                                              |
+| -------------- | ------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| sotto-web      | `fix/accounts-flow-rabbitmq`   | sotto-web#18      | Draft: healthchecked Compose stack, `/readyz` gate, failure diagnostics; standalone server for browser tests, steadier story tests, quieter logs; awaiting Jenkins |
+| sotto-api      | `fix/ci-pin-gitleaks`          | sotto-api#15      | Draft: secrets scan pinned to gitleaks v8.30.1                                                                                                                     |
+| sotto-platform | `docs/ci-accounts-flow-status` | sotto-platform#20 | Draft: this STATUS; secrets scan pinned to gitleaks v8.30.1                                                                                                        |
+
+No merge order: none depends on another. Handoff log: `sotto-web/CI_PROGRESS.md` (diagnosis,
+changes, checks, next steps). Next step: the owner lets Jenkins build sotto-web#18; if Accounts
+flow still fails, the new `===== accounts stack` block in the log names the service and why
+(OOM kill, unhealthy, exit code). Deferred, cosmetic: Prisma's OpenSSL warning in the api image
+(migrations apply; approach in the log).
+
 ## Ready for review: Phase 6 (AI modes, providers and billing)
 
 Log: `sotto-web/PHASE_6_PROGRESS.md` (one log for all three repos: requirements, milestones,
