@@ -15,14 +15,15 @@ command -v aws >/dev/null || snap install aws-cli --classic
 KEY=$(aws ssm get-parameter --region "${region}" --name "${key_param}" --with-decryption \
   --query Parameter.Value --output text)
 
-mkdir -p /opt/models
+MODELS=/opt/models
+mkdir -p "$MODELS"
 docker rm -f vllm >/dev/null 2>&1 || true
 # --served-model-name: the app asks for "sotto-chat", whatever model sits behind it.
 # --enable-prefix-caching: Ask's system prompt and follow-ups reuse earlier work, so later
 #   answers start faster.
 # --reasoning-parser qwen3: if the model ever reasons, that text stays out of the answer.
 docker run -d --name vllm --restart unless-stopped --gpus all --ipc=host \
-  -p 8000:8000 -v /opt/models:/root/.cache/huggingface \
+  -p 8000:8000 -v "$MODELS":/root/.cache/huggingface \
   "${vllm_image}" \
   --model "${model}" \
   --served-model-name sotto-chat \

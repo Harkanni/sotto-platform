@@ -54,18 +54,6 @@ variable "demo_volume_gb" {
   default     = 100
 }
 
-
-variable "demo_eip_allocation_id" {
-  description = <<-EOT
-    Optional: an Elastic IP you allocated yourself (eipalloc-...). Terraform then only attaches
-    it and never releases it, so the demo keeps the same address (and sslip.io name, and OAuth
-    redirect URLs) across `terraform destroy` and `apply`. Empty: Terraform allocates one, which
-    a destroy releases.
-  EOT
-  type        = string
-  default     = ""
-}
-
 variable "workbench_enabled" {
   description = "Create the on-demand workbench (8 GB) for Private-mode models and Kubernetes practice."
   type        = bool
@@ -86,9 +74,13 @@ variable "domain" {
 # ── The private chat model on its own GPU server (model.tf, ADR 0032) ──────────────────────
 
 variable "model_server_enabled" {
-  description = "Run the GPU model server. Off: the demo answers with passages only (no chat model)."
+  description = <<-EOT
+    Run the GPU model server. Off by default: it needs the GPU quota and a zone that offers
+    model_instance_type. Turn it on with -var model_server_enabled=true (or terraform.tfvars).
+    Off: the demo answers with passages only (no chat model).
+  EOT
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "model_instance_type" {

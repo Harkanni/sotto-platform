@@ -26,9 +26,10 @@ data "aws_subnets" "model" {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
+  # "none" when no zone offers the type: an empty filter would match every subnet.
   filter {
     name   = "availability-zone"
-    values = data.aws_ec2_instance_type_offerings.model.locations
+    values = coalescelist(data.aws_ec2_instance_type_offerings.model.locations, ["none"])
   }
 }
 
@@ -41,7 +42,7 @@ resource "aws_security_group" "model" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description     = "vLLM's OpenAI-compatible API, from the app"
+    description     = "vLLM OpenAI-compatible API from the app server"
     from_port       = 8000
     to_port         = 8000
     protocol        = "tcp"
@@ -111,7 +112,7 @@ resource "aws_instance" "model" {
   count                  = var.model_server_enabled ? 1 : 0
   ami                    = data.aws_ssm_parameter.gpu_ami.value
   instance_type          = var.model_instance_type
-  subnet_id              = data.aws_subnets.model.ids[0]
+  subnet_id              = try(data.aws_subnets.model.ids[0], null)
   vpc_security_group_ids = [aws_security_group.model[0].id]
   iam_instance_profile   = aws_iam_instance_profile.model[0].name
 
@@ -130,12 +131,22 @@ resource "aws_instance" "model" {
     http_put_response_hop_limit = 2 # the host reads its key; containers don't need the role
   }
 
+  # The root disk holds the image and the weights (~60 GB) and is fast, because loading the
+  # weights is disk-bound. Everything goes with `terraform destroy`; each new server downloads
+  # them again (~10 minutes).
   root_block_device {
     volume_type = "gp3"
-    volume_size = 200 # vLLM image (~10 GB) and the FP8 weights (~37 GB), with room to switch
-    throughput  = 500 # loading 37 GB of weights is disk-bound
+    volume_size = 200
+    throughput  = 500
     iops        = 6000
     encrypted   = true
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(data.aws_subnets.model.ids) > 0
+      error_message = "No availability zone in this region offers ${var.model_instance_type}. Pick another model_instance_type, or set model_server_enabled = false."
+    }
   }
 
   tags = {

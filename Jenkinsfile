@@ -1,6 +1,6 @@
 // sotto-platform on Jenkins (ADR 0030): what GitHub Actions' ci.yml and deploy-config.yml did.
 // Terraform, shellcheck and Caddy run in containers, so the host needs only Docker (with the
-// compose plugin), the AWS CLI and the Lockable Resources plugin.
+// compose plugin) and the AWS CLI.
 //
 // Terraform formatting is checked, not fixed: run `terraform fmt -recursive terraform` before
 // pushing (or read the diff this prints and apply it).
@@ -10,7 +10,8 @@ pipeline {
 
   options {
     timeout(time: 20, unit: 'MINUTES')
-    disableConcurrentBuilds()
+    // A newer push to the same branch or PR stops the older build: nobody needs its result.
+    disableConcurrentBuilds(abortPrevious: true)
     buildDiscarder(logRotator(numToKeepStr: '30'))
   }
 
@@ -22,7 +23,9 @@ pipeline {
   stages {
     stage('Secrets scan') {
       steps {
-        sh 'docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest dir /repo --redact --verbose'
+        // Pinned: with `latest`, a new release could change the rules (or break the scan)
+        // without a commit here. v8.30.1 is what `latest` was on 2026-10-15. Bump on purpose.
+        sh 'docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 dir /repo --redact --verbose'
       }
     }
 

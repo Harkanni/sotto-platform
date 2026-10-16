@@ -20,9 +20,9 @@ private answers, real transcripts, real notes, live notes in Listen mode.
 - CPU, not GPU: an 8B model at 4-bit runs at a readable pace on 8 Graviton cores, with no GPU
   quota request, x86 images or GPU drivers. A GPU host (g5/g6) is the upgrade if answers must
   be faster or the model larger.
-- The address is kept: an Elastic IP the owner allocates once can be passed as
-  `demo_eip_allocation_id`, so `terraform destroy`/`apply` no longer changes the sslip.io name
-  (and the OAuth redirect URLs that depend on it).
+- The address: the demo's Elastic IP belongs to `terraform/dev`, so it stays put while the stack
+  is up and changes after a destroy and apply (`demo_eip_allocation_id` was removed on
+  2026-10-15; the owner wants one stack that comes and goes whole, ADR 0033).
 
 ## Consequences
 

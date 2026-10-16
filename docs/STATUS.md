@@ -2,39 +2,27 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-12 (Phase 7 in progress; blockers consolidated)
-**Current phase:** 7 — Live notetaker (in progress)
+**Updated:** 2026-10-16 (Phase 7 branches brought up to date with `main`)
+**Current phase:** 7 — Live notetaker (in progress: M5 of M0–M9)
 
-**Demo:** deployed from `main` by the `images` workflows (`terraform output demo_url` prints the address)
+**Demo:** deployed from `main` by Jenkins: each app's `Build and push image` → `Deploy to demo` stages, after every check passes (`terraform output demo_url` prints the address)
 
 ## In progress: Phase 7 (Live notetaker)
 
-Log: `sotto-web/PHASE_7_PROGRESS.md` (requirements, milestones, next step, checks run).
+Log: `sotto-web/PHASE_7_PROGRESS.md` (requirements, milestones, next step, checks run). Done when
+(PLAN): a live call is transcribed as it happens, and the bot joins a Meet call. The first half
+holds in the rendered app.
 
-| Repo           | Branch           | PR                        | State                                                     |
-| -------------- | ---------------- | ------------------------- | --------------------------------------------------------- |
-| sotto-api      | `feat/p7-live`   | sotto-api#10 (draft)      | M1 schema done; Listen API next                           |
-| sotto-web      | `feat/p7-live`   | sotto-web#12 (draft)      | Phase 7 log; Listen mode after the API                    |
-| sotto-platform | `docs/p7-status` | sotto-platform#10 (draft) | Based on `docs/p6-status` (sotto-platform#8 isn't merged) |
+| Repo           | Branch           | PR                        | State                                                                                                  |
+| -------------- | ---------------- | ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| sotto-api      | `feat/p7-live`   | sotto-api#10 (draft)      | M1–M3 done: schema, Listen API (numbered audio chunks, SSE, End → meeting), live notes, ask mid-call   |
+| sotto-web      | `feat/p7-live`   | sotto-web#12 (draft)      | M4 done (Listen capture and screens); M5 part 1 checked in the rendered app; M5 part 2 next            |
+| sotto-platform | `docs/p7-status` | sotto-platform#10 (draft) | This STATUS; ADRs 0028 (live audio over HTTP chunks + SSE) and 0029 (a capture is private until saved) |
 
-Listen mode first (live transcript and notes in the app, ask mid-call), then calendar and the
-self-hosted Meet bot. Audio goes up as numbered HTTP chunks with the transcript coming back over
-SSE rather than a WebSocket (Next's rewrites don't carry WebSocket upgrades, and no dependency
-can be added while CI is blocked); an ADR records it.
-
-## Ready for review: Phase 6 (AI modes, providers and billing)
-
-Log: `sotto-web/PHASE_6_PROGRESS.md` (one log for all three repos: requirements, milestones,
-checks run, decisions).
-
-| Repo           | Branch             | PR               | State                                                                                     |
-| -------------- | ------------------ | ---------------- | ----------------------------------------------------------------------------------------- |
-| sotto-api      | `feat/p6-ai-modes` | sotto-api#7      | Ready: key vault, BYOK adapters, AI settings, gateway, metering, Paystack, re-index       |
-| sotto-web      | `feat/p6-ai-modes` | sotto-web#7      | Ready: AI settings, Switch model, Answer with Private, Usage and billing, onboarding step |
-| sotto-platform | `docs/p6-status`   | sotto-platform#8 | Ready: ADRs 0023–0027, Compose settings, demo master key (Terraform), this STATUS         |
-
-Merge order: sotto-api#7 first (migration `ai_modes_and_billing`), then sotto-web#7, then this
-PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Blockers).
+All three branches include `main` as of 2026-10-16. Merge order at the end of the phase:
+sotto-api#10 first (migration `live_notetaker`), then sotto-web#12. sotto-platform#10 can merge
+ahead of them (this STATUS and two decisions already taken), so `main`'s STATUS is current; the
+rest of Phase 7's platform work (the bot's ADR, Compose and demo config) then comes in its own PR.
 
 ## Done
 
@@ -53,79 +41,69 @@ PR. **CI must run green first**: GitHub Actions is refusing to start jobs (Block
 - Phase 5 — Ask and search merged (sotto-api#6, sotto-web#6, sotto-platform#7):
   hybrid retrieval with access in SQL, `GET /search`, notes, streamed answers with citations,
   the eval set in CI with real embeddings. ADRs 0019–0022. Log: `sotto-web/PHASE_5_PROGRESS.md`.
-- Phase 6 — AI modes, providers and billing, ready for review (sotto-api#7, sotto-web#7,
-  sotto-platform#8): Private, BYOK and Managed per workspace; envelope-encrypted keys; model
+- Phase 6 — AI modes, providers and billing merged (sotto-api#7 and sotto-web#7 on 2026-10-10,
+  sotto-platform#8 on 2026-10-12): Private, BYOK and Managed per workspace; envelope-encrypted keys; model
   catalog and Switch model; Restricted proven never to reach outside AI; metering, quotas and
   plans; Paystack test mode behind `PaymentProvider`; embedding re-index. ADRs 0023–0027.
 - CI/CD moved to Jenkins (ADR 0030; sotto-platform#9). Every check now runs in the
-  Jenkinsfiles; GitHub Actions is no longer used.
+  Jenkinsfiles; GitHub Actions is no longer used. A newer push to a branch stops its older
+  build (`abortPrevious`; sotto-api, sotto-web and this repo's `chore/jenkins-abort-previous`).
+  `terraform destroy` removes everything, ECR included: while the demo is down, Jenkins on
+  `main` skips the push and deploy; after `terraform apply`, run **Build** on each app's `main`.
+- One Terraform stack (2026-10-15, `chore/single-stack`): `terraform/keep` is gone; `apply`
+  brings everything up and `destroy` takes everything down, the demo's IP included (ADR 0033
+  superseded). If `terraform/keep` was ever applied, destroy it first.
+- `fix/accounts-flow-ci` (sotto-web): the accounts flow prints the api's logs on failure
+  (they were removed first) and gives the sample-content load 30 s. It passes 7/7 locally
+  against api `main`.
+- CI fixes merged (2026-10-15; sotto-web#18, sotto-api#15, sotto-platform#20): the Accounts flow
+  waits for a healthchecked Compose stack and the api's `/readyz`, and prints each service's
+  state and logs on failure (RabbitMQ never came up; the old wait loop failed silently); browser
+  tests run the standalone server; steadier story tests; quieter logs; gitleaks pinned to
+  v8.30.1. `main` built green and deployed. Log: `sotto-web/CI_PROGRESS.md`. Deferred,
+  cosmetic: Prisma's OpenSSL warning in the api image (approach in that log).
+- Demo mailbox fix merged (2026-10-15; sotto-web#19, sotto-platform#21): the app's service
+  worker leaves `/api` and `/mail` to the browser. It answered `/mail/` too, which hides
+  Mailpit's password prompt, so the mailbox looped on 401 in any browser that had opened Sotto.
+- Jenkins builds run side by side (ADR 0030 update): no shared lock; each build gets a port
+  slot from its executor number. Set the Jenkins node to 3 executors (5 at most).
+- The GPU model server is now off by default (`model_server_enabled = false`): it needs the GPU
+  quota and a zone offering `model_instance_type`; a clear error replaces the old crash.
+  (`fix/terraform-fmt-model`: a comment broke `terraform fmt` alignment in `model.tf`.)
 - Waitlist (separate, live on Render): `harkanni/sotto-waitlist`. Untouched until Phase 8.
 
 ## Next step
 
-1. The owner: fix GitHub Actions billing (Blockers), re-run CI on the three PRs, then review and
-   merge sotto-api#7, sotto-web#7, sotto-platform#8 in that order. The `ai_modes_and_billing`
-   migration runs on deploy.
-2. The owner, for the demo: `terraform apply` in `terraform/dev` (adds
-   `/sotto/demo/AI_KEYS_MASTER`; nothing else changes from this phase), then re-run
-   `deploy-config`. Until then the demo's AI settings says keys can't be stored.
+1. An agent session: Phase 7 M5 part 2 in sotto-web (`PHASE_7_PROGRESS.md` → Next steps): a
+   "Live now" row on Meetings and Home, stories for Listen, an e2e with Chromium's fake
+   microphone, `pnpm smoothness`, the Listen section of `UI_DESIGN_SYSTEM.md`. Then M6–M8
+   (calendar connections and the Meet bot) and M9.
+2. Optional, the owner: merge sotto-platform#10 now so `main`'s STATUS is current.
 3. Optional, the owner: a Paystack **test** secret key and plan codes in SSM
    (`/sotto/demo/PAYSTACK_SECRET_KEY`, `PAYSTACK_PLAN_PRO_MONTHLY`, …) to try Paystack's own test
    checkout; and a Managed provider key (`AI_MANAGED_CHAT`, `AI_MANAGED_KEY`) for the demo.
-4. Phase 7 is under way on the branches above (Phase 6 is merged in sotto-api and sotto-web;
-   this repo's #8 and #9 are still open). An agent session continues from the Phase 7 log's
-   **Next steps**.
-5. ADR numbers: 0023–0027 Phase 6 (merged), 0028–0029 Phase 7 (this branch), 0030 Jenkins
-   (sotto-platform#9, renumbered), 0031 the demo's real-AI host.
 
 ## Blockers and things the owner must do
 
-Consolidated 2026-10-12. CI/CD has moved from GitHub Actions to Jenkins (the owner's decision;
-sotto-platform#9 records it as ADR 0023).
-
-**Blocking merges and deploys** (updated 2026-10-13)
-
-- [ ] **Jenkins can't report to GitHub**: every build logs `Could not update commit status …
-  Resource not accessible by personal access token (403)`. The token in Jenkins credential
-      `github-sotto` needs **Commit statuses: Read and write** (fine-grained) or the `repo` scope
-      (classic), for all three repos. Until then PRs show no Jenkins check.
-- [x] sotto-platform `main` fmt fixed (#14, merged).
-- [ ] sotto-platform#15: security group description AWS refused (blocks `terraform apply`), and
-      the keep stack (model cache + fixed IP, ADR 0033). Apply `terraform/keep` once.
-- [ ] Jenkins token: fine-grained **Commit statuses: Read and write** (it is read-only now).
-- [ ] Merge the CI ports once green: sotto-api#11, sotto-web#13 (sotto-platform#12 is merged).
-- [ ] Jenkins host: Lockable Resources plugin; `sudo npx -y playwright@1 install-deps chromium`;
-      ≥60 GB disk. AWS access is the jenkins user's AWS CLI profile; ECR registry and config
-      bucket are derived from the account (no global variables).
-- Merged: #9 (Jenkins, ADR 0030), #11 (OIDC removed), #12 (platform on Jenkins), #13 (bigger
-  demo). Open: #14 (GPU model server, ADR 0032; needs a GPU quota first), sotto-api#12 (sends the
-  model's thinking-off option).
-
-**For the demo**
-
-- [ ] Phase 6: `terraform apply` in `terraform/dev` (adds `/sotto/demo/AI_KEYS_MASTER`), then
-      redeploy the config. Until then the demo can't store workspace API keys.
-- [ ] Phase 4 upload fix: `terraform apply` (the app's scoped S3 key, bucket CORS and lifecycle),
-      if not done yet.
-- [ ] Demo's AI: app server m7g.2xlarge (ADR 0031, merged) + chat on a g6e.xlarge GPU with
-      Qwen3.6-35B-A3B (ADR 0032, sotto-platform#14). Request the G-instance quota (4 vCPUs,
-      eu-west-2) first; after the first deploy, run the re-index once (steps in #13).
-
-**For features (Phase 3 and 7)**
-
-- [ ] Google and Microsoft OAuth apps: sign-in buttons stay hidden without them, and Phase 7's
-      calendar connection needs them (with calendar read scopes).
-- [ ] A Google account for the notetaker bot ("Sotto Notetaker"), or accept that it joins Meet
-      as a signed-out guest the host must admit.
-- [ ] Optional: a Paystack test key and plan codes (confirms ADR 0026's response shapes); a
-      Managed provider key.
-- [ ] Buy `sotto.ai` (domain and company email); until then the demo uses `<ip>.sslip.io`.
-
-**Housekeeping**
-
-- [x] `terraform/dev/github_oidc.tf` removed in sotto-platform#11 (plan: 3 to destroy); and with Jenkins, the GitHub
-      secrets and variables for AWS (`AWS_ACCESS_KEY_ID`, `ECR_REGISTRY` …) can be removed once
-      `images.yml` is off.
+- [ ] Phase 6: confirm Paystack's `transaction/verify` and subscription-list shapes with a real
+      test key (ADR 0026); the stand-in follows Paystack's docs.
+- [ ] Buy `sotto.ai` (available, not bought). Until then the demo uses `https://<ip>.sslip.io`,
+      which changes with every `terraform destroy` + `apply`, and which some security tools block.
+- [ ] Phase 3: create the Google and Microsoft OAuth apps (steps in the Phase 3 PR); until then
+      those buttons stay hidden. Phase 7's calendar connection needs them too (until then it
+      runs on a labelled stand-in).
+- [ ] Phase 7: a Google account for the notetaker bot ("Sotto Notetaker") is the owner's choice;
+      without one it joins Meet as a guest that the host must admit.
+- [ ] Cleanup, when convenient: `terraform output github_secrets` and the OIDC Terraform
+      (`terraform/dev/github_oidc.tf`, ADR 0007) are unused since CI moved to Jenkins.
+- [x] GitHub Actions billing (2026-10-10): no longer matters; CI runs on Jenkins (ADR 0030).
+- [x] Terraform for Phases 4–6 (scoped S3 key, CORS, `/sotto/demo/AI_KEYS_MASTER`, …): the
+      single stack was applied from scratch on 2026-10-15, and the first boot writes the server's
+      `.env` from SSM.
+- [x] ECR repositories: recreated by that apply; Jenkins `main` builds pushed and deployed the
+      api, worker, transcriber and web on 2026-10-15.
+- [x] Phase 4 decision (mock engines on a small demo server): decided in ADR 0031, real private
+      AI on a larger server; the chat model's GPU server is ADR 0032 (off by default).
 
 ## Open decisions
 
@@ -138,7 +116,14 @@ sotto-platform#9 records it as ADR 0023).
 
 ## Environment facts
 
-- AWS: paid plan, region `eu-west-2` (London). Demo costs ~$35/month; budget alert at $40.
-- Demo server: t4g.medium (ARM) → images are built for `linux/arm64` on GitHub's arm64 runners.
-- Agent sandbox: no npm/PyPI/apt access and no Docker daemon. CI's `sync` jobs commit lockfiles
-  and publish `node_modules` snapshots that `scripts/agent-deps.sh` restores (both app repos).
+- AWS: paid plan, region `eu-west-2` (London). The demo server (m7g.2xlarge) costs about $300 a
+  month running all the time (ADR 0031); budget alert at $350. Stopping it when not demoing saves
+  most of that. The GPU chat server is off by default (about $2 an hour when on, ADR 0032).
+- Images are built for `linux/arm64` on the Jenkins host, which is arm64 like the demo.
+- Demo address: `terraform output demo_url` (and `demo_mail_url`, user `sotto`, password from
+  `terraform output -raw demo_mail_password`).
+- Agent sandbox (2026-10-16): npm, PyPI and the Ubuntu package mirror are reachable; Docker Hub
+  and `binaries.prisma.sh` are not. Prisma's schema engine comes from the newest `dev-cache`
+  snapshot (`scripts/agent-deps.sh`; GitHub Actions' `sync` job no longer publishes new ones).
+  sotto-api's integration tests run against apt's Postgres 16 + pgvector, Redis and moto (S3):
+  steps in `sotto-web/PHASE_7_PROGRESS.md`.
