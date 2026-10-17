@@ -1,6 +1,6 @@
 # 0030 — Jenkins runs CI/CD on its own EC2 server
 
-- **Status:** accepted
+- **Status:** superseded by 0034 (2026-10-17): CI/CD is back on GitHub Actions; Jenkins is gone
 - **Date:** 2026-10-10 (numbered 0030 on 2026-10-12: 0023 was taken by Phase 6's key vault ADR,
   and 0028–0029 by Phase 7)
 
