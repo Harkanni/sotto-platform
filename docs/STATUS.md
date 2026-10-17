@@ -2,8 +2,8 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-17 (CI/CD live on GitHub Actions: `main` deployed the demo; the CI key, ADR 0034)
-**Current phase:** 7 — Live notetaker (in progress: M5 of M0–M9)
+**Updated:** 2026-10-17 (Phase 7 M5 part 2 started: sotto-web#21)
+**Current phase:** 7 — Live notetaker (in progress: M5 part 2 of M0–M9)
 
 **Demo:** deployed from `main` by GitHub Actions: each app's CI/CD workflow (`.github/workflows/pipeline.yml`) pushes the images and deploys after every check passes, and skips that while the demo is down (`terraform output demo_url` prints the address)
 
@@ -21,7 +21,12 @@ holds in the rendered app.
 
 The owner merged sotto-api#10 and sotto-web#12 on 2026-10-17 with M1–M5 part 1. The rest of the
 phase (M5 part 2, then M6–M9) starts from `main` on new branches; the rest of Phase 7's platform
-work (the bot's ADR, Compose and demo config) comes in its own PR.
+work (the bot's ADR 0035, Compose and demo config) comes in its own PR.
+
+| Slice     | Repo           | Branch                    | PR                   | State                                                                          |
+| --------- | -------------- | ------------------------- | -------------------- | ------------------------------------------------------------------------------ |
+| M5 part 2 | sotto-web      | `feat/p7-live-now`        | sotto-web#21 (draft) | Live now on Meetings and Home, Listen stories and e2e, smoothness, design docs |
+| M5 part 2 | sotto-platform | `docs/p7-live-now-status` | this STATUS update   | companion                                                                      |
 
 ## Done
 
@@ -78,11 +83,12 @@ work (the bot's ADR, Compose and demo config) comes in its own PR.
 
 ## Next step
 
-1. An agent session: Phase 7 M5 part 2 in sotto-web (`PHASE_7_PROGRESS.md` → Next steps): a
-   "Live now" row on Meetings and Home, stories for Listen, an e2e with Chromium's fake
-   microphone, `pnpm smoothness`, the Listen section of `UI_DESIGN_SYSTEM.md`. Then M6–M8
-   (calendar connections and the Meet bot) and M9.
-2. The owner: merge `fix/ci-key-output`, then rotate the CI key and retire Jenkins (**Blockers**).
+1. An agent session: Phase 7 M5 part 2 in sotto-web (sotto-web#21, `PHASE_7_PROGRESS.md` →
+   Next steps): a "Live now" row on Meetings and Home, stories for Listen, an e2e with
+   Chromium's fake microphone, `pnpm smoothness`, the Listen section of `UI_DESIGN_SYSTEM.md`.
+   Then M6–M8 (calendar connections and the Meet bot) and M9.
+2. The owner: rotate the CI key and retire Jenkins (**Blockers**); `fix/ci-key-output` is merged
+   (sotto-platform#23).
 3. Optional, the owner: a Paystack **test** secret key and plan codes in SSM
    (`/sotto/demo/PAYSTACK_SECRET_KEY`, `PAYSTACK_PLAN_PRO_MONTHLY`, …) to try Paystack's own test
    checkout; and a Managed provider key (`AI_MANAGED_CHAT`, `AI_MANAGED_KEY`) for the demo.
