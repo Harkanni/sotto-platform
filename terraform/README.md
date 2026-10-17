@@ -36,7 +36,7 @@ terraform init -backend-config=backend.hcl
 terraform plan                                # read it: ~35 resources, nothing destroyed
 terraform apply
 
-# 3. Give the three repos' CI/CD workflows the AWS key and settings (repository secrets)
+# 3. Once: the CI user and its key ("The CI key" below), then the repos' secrets
 terraform output -raw github_secrets | sh     # needs `gh auth login` first
 
 # 4. See it
@@ -44,6 +44,25 @@ terraform output demo_url
 ```
 
 The first boot takes 3–5 minutes (Docker install, then Postgres, Redis, RabbitMQ and Caddy start). Until the app images are deployed, the URL says *"Sotto's demo is starting up"*. To deploy the apps, run the CI/CD workflow on `main` in sotto-api and sotto-web (Actions → CI/CD → Run workflow), or merge any PR. While the demo is down, `main` skips the deploy rather than failing.
+
+## The CI key
+
+GitHub Actions reaches AWS with one IAM user's access key, kept as repository secrets (ADR 0007, ADR 0034). That user is made once, by hand, outside this stack (`dev/ci.tf` says why): `terraform destroy` leaves its key alone, so CI can still see that the demo is down and skip the deploy, and the secrets stay the same from one session to the next. Terraform writes the user's policy; you attach it.
+
+```bash
+cd terraform/dev                              # with the stack applied
+# The user, with exactly what CI needs (an existing CI user works too: skip create-user)
+aws iam create-user --user-name sotto-ci
+aws iam put-user-policy --user-name sotto-ci --policy-name sotto-ci \
+  --policy-document "$(terraform output -raw ci_policy)"
+# Its key: copy AccessKeyId and SecretAccessKey into terraform.tfvars
+# (aws_access_key_id, aws_secret_access_key)
+aws iam create-access-key --user-name sotto-ci
+terraform apply                               # only the outputs change
+terraform output -raw github_secrets | sh     # all three repos
+```
+
+To rotate: `create-access-key` again, swap the two values in `terraform.tfvars`, `terraform apply`, the same `| sh`, then `aws iam delete-access-key --user-name sotto-ci --access-key-id <old id>`. With no key in `terraform.tfvars`, `github_secrets` leaves the repos' key secrets alone and only sets the region, registry and bucket.
 
 ## Everyday
 

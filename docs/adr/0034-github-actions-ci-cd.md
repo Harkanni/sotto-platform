@@ -56,3 +56,12 @@ on GitHub Actions, with Jenkins gone.
   Actions allowance (sotto-platform's checks are small; sotto-api's and sotto-web's are not).
   The accounts flow needs sotto-api to be public.
 - Rolling back: the Jenkinsfiles are in the history (removed in `chore/github-actions`).
+
+## Update, 2026-10-17
+
+The CI user lives outside the Terraform stack, made once by hand: `terraform destroy` would
+otherwise delete its key, so CI couldn't see that the demo is down (it would fail instead of
+skipping) and every apply would need new secrets in three repos. `terraform/dev/ci.tf` writes
+its least-privilege policy (`terraform output -raw ci_policy`), and `github_secrets` sets the key
+secrets only when `terraform.tfvars` holds the key; otherwise it leaves them as they are.
+Steps: `terraform/README.md`, "The CI key".

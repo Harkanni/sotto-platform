@@ -10,19 +10,29 @@ output "workbench_instance_id" {
   value = var.workbench_enabled ? aws_instance.workbench[0].id : ""
 }
 
-output "github_secrets" {
-  description = "Run these once (GitHub CLI) to configure AWS credentials and deployment settings for the repos."
-  sensitive   = true
-
-  value = join("\n", flatten([
+locals {
+  # The key secrets only when terraform.tfvars holds the CI user's key. Printed with empty values
+  # and piped to `sh`, they would blank the working key the repos already have.
+  ci_key_set = var.aws_access_key_id != "" && var.aws_secret_access_key != ""
+  github_key_secrets = local.ci_key_set ? flatten([
     for repo in var.github_repos : [
       "gh secret set AWS_ACCESS_KEY_ID --repo ${var.github_owner}/${repo} --body '${var.aws_access_key_id}'",
       "gh secret set AWS_SECRET_ACCESS_KEY --repo ${var.github_owner}/${repo} --body '${var.aws_secret_access_key}'",
+    ]
+  ]) : ["echo 'No CI key in terraform.tfvars: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY left as they are.' >&2"]
+  github_config_secrets = flatten([
+    for repo in var.github_repos : [
       "gh secret set AWS_REGION --repo ${var.github_owner}/${repo} --body '${var.region}'",
       "gh secret set ECR_REGISTRY --repo ${var.github_owner}/${repo} --body '${local.ecr_registry}'",
       "gh secret set CONFIG_BUCKET --repo ${var.github_owner}/${repo} --body '${aws_s3_bucket.dev.bucket}'",
     ]
-  ]))
+  ])
+}
+
+output "github_secrets" {
+  description = "Commands (GitHub CLI) that set the AWS key and deploy settings as secrets in the three repos: terraform output -raw github_secrets | sh"
+  sensitive   = true
+  value       = join("\n", concat(local.github_key_secrets, local.github_config_secrets))
 }
 
 output "shell" {

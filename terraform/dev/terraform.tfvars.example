@@ -4,3 +4,8 @@ alert_email = "you@example.com"
 # Optional
 # workbench_enabled = true
 # domain            = "sotto.ai"   # once bought; the demo moves to demo.sotto.ai
+
+# Optional: the CI user's key, only for `terraform output github_secrets`
+# (terraform/README.md, The CI key). Never commit it: this file is git-ignored.
+# aws_access_key_id     = "..."
+# aws_secret_access_key = "..."
