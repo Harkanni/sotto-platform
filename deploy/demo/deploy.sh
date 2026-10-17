@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Deploys new images on the demo server. Called through SSM (no SSH) by the sotto-deploy
-# document that each app repo's images.yml triggers:
+# document that each app repo's CI/CD workflow (.github/workflows/pipeline.yml) triggers:
 #   deploy.sh <tag> <service> [service...]     e.g. deploy.sh sha-1a2b3c4 api worker
 #   deploy.sh bootstrap                        first boot: config, secrets, backing services
 # Steps: sync config from S3 → write .env from SSM → record tags → pull → migrate → up --wait.

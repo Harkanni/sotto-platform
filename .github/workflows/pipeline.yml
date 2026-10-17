@@ -1,0 +1,193 @@
+# sotto-platform: CI/CD on GitHub Actions (ADR 0034; it replaced Jenkins).
+#
+# Every pull request and every push to main runs the checks. On main, when deploy/demo changed
+# and every check has passed, the demo server gets the new config.
+#
+#   secrets        gitleaks over the files and every commit
+#   terraform      fmt, init without the remote state or AWS, validate: both stacks
+#   scripts        shellcheck; the Compose and Caddy files parse
+#   deploy-config  main only: upload deploy/demo to the config bucket, re-sync the demo server
+#
+# Pull requests (forks included) never see a secret: only `deploy-config` reads the AWS key, and
+# it runs only on main. Third-party actions are pinned to a commit (the comment says which
+# release); Dependabot proposes updates.
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # Actions → CI/CD → Run workflow. On main it also pushes the demo config, changed or not.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run per pull request or branch. A newer push to a PR stops the older run; on main, runs
+  # queue instead, so a deploy is never cut off halfway.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  secrets:
+    name: Secrets scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Every commit, not just the last: in a public repo a key that was committed and then
+          # deleted can still be read in the history.
+          fetch-depth: 0
+      # Pinned: with `latest`, a new release could change the rules (or break the scan) without a
+      # commit here. Bump on purpose.
+      - name: gitleaks (the files)
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 dir /repo --redact --verbose
+      - name: gitleaks (every commit)
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --redact --verbose
+
+  # Syntax and references for both stacks, without AWS credentials or the remote state.
+  # Formatting is checked, not fixed: run `terraform fmt -recursive terraform` before pushing.
+  terraform:
+    name: Terraform (${{ matrix.stack }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: [bootstrap, dev]
+    defaults:
+      run:
+        working-directory: terraform/${{ matrix.stack }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.4
+          # The plain binary: exit codes and output exactly as Terraform gives them.
+          terraform_wrapper: false
+      - name: terraform fmt
+        run: terraform fmt -check -diff
+      - name: terraform init (no backend)
+        run: terraform init -backend=false -input=false
+      # JSON output → annotations, so errors show inline on the pull request's Files tab.
+      - name: terraform validate
+        env:
+          STACK: ${{ matrix.stack }}
+        run: |
+          terraform validate -no-color -json > validate.json || true
+          jq -r --arg dir "terraform/$STACK" '.diagnostics[]? | "::\(.severity) file=\($dir)/\(.range.filename // "main.tf"),line=\(.range.start.line // 1)::\(.summary): \(.detail // "" | gsub("\n"; " "))"' validate.json
+          jq -e '.valid' validate.json > /dev/null
+
+  scripts:
+    name: Scripts, Compose and Caddy files
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: shellcheck
+        run: |
+          docker run --rm -v "$PWD:/mnt" koalaman/shellcheck:v0.11.0 \
+            deploy/demo/deploy.sh deploy/demo/backup.sh terraform/dev/user_data/workbench.sh
+      - name: Compose files parse
+        run: |
+          # local/compose.yaml builds from the sibling repos: empty stand-ins are enough to parse.
+          mkdir -p ../sotto-web ../sotto-api/services/transcriber
+          docker compose -f local/compose.yaml config --quiet
+          # The demo's .env comes from SSM on the server; stand-ins for the values it requires.
+          printf '%s\n' ECR_REGISTRY=x POSTGRES_PASSWORD=x RABBITMQ_PASSWORD=x SITE_ADDRESS=localhost \
+            AUTH_SECRET=x MAILPIT_PASSWORD=x FILES_BUCKET=x AWS_REGION=eu-west-2 > "$RUNNER_TEMP/demo.env"
+          docker compose -f deploy/demo/compose.yaml --env-file "$RUNNER_TEMP/demo.env" config --quiet
+      - name: Caddyfiles parse
+        run: |
+          docker run --rm -v "$PWD/local/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          docker run --rm -e SITE_ADDRESS=localhost -v "$PWD/deploy/demo/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+  # main only, after every check, when deploy/demo changed: upload the files to the config
+  # bucket and tell the demo server to re-sync and restart what changed. `terraform apply`
+  # uploads them too, so while the demo is down this is skipped, not failed.
+  deploy-config:
+    name: Deploy the demo config
+    needs: [secrets, terraform, scripts]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    concurrency:
+      group: deploy-demo-config
+      cancel-in-progress: false
+    env:
+      # One IAM access key, kept as repository secrets (ADR 0007): `terraform output -raw
+      # github_secrets` prints the commands that set them all.
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || vars.AWS_REGION || 'eu-west-2' }}
+      # Optional: sotto-dev-<account id> when it isn't set.
+      CONFIG_BUCKET: ${{ secrets.CONFIG_BUCKET || vars.CONFIG_BUCKET }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Did deploy/demo change?
+        id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            echo "Run by hand: deploying the config."
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$BEFORE" "$GITHUB_SHA" -- deploy/demo 2>/dev/null; then
+            echo "deploy/demo is unchanged: nothing to deploy."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            # Changed, or the comparison itself failed (say, a rewritten history): deploy.
+            git diff --stat "$BEFORE" "$GITHUB_SHA" -- deploy/demo 2>/dev/null || true
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Is the demo up?
+        id: demo
+        if: steps.changes.outputs.deploy == 'true'
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error title=AWS key::Add the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY repository secrets (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          n=$(aws ec2 describe-instances --filters Name=tag:sotto-role,Values=demo \
+            Name=instance-state-name,Values=running --query 'length(Reservations)' --output text)
+          if [ "$n" = 0 ]; then
+            echo "up=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=The demo is down::No running demo server, so the config wasn't deployed. terraform apply uploads it when the demo comes back."
+          else
+            echo "up=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Upload deploy/demo and re-sync the demo server
+        if: steps.demo.outputs.up == 'true'
+        run: |
+          CONFIG_BUCKET="${CONFIG_BUCKET:-sotto-dev-$(aws sts get-caller-identity --query Account --output text)}"
+          for f in deploy/demo/*; do
+            aws s3 cp "$f" "s3://$CONFIG_BUCKET/demo/$(basename "$f")" --no-progress
+          done
+          ID=$(aws ssm send-command --document-name sotto-deploy \
+            --targets "Key=tag:sotto-role,Values=demo" \
+            --parameters "tag=bootstrap,services=" \
+            --comment "sotto-platform config ${GITHUB_SHA::7}" \
+            --query Command.CommandId --output text)
+          echo "SSM command: $ID"
+          for _ in $(seq 1 60); do
+            STATUS=$(aws ssm list-commands --command-id "$ID" --query 'Commands[0].Status' --output text)
+            echo "status: $STATUS"
+            case "$STATUS" in
+              Success)
+                echo "Deployed the demo config from \`${GITHUB_SHA::7}\`." >> "$GITHUB_STEP_SUMMARY"
+                exit 0 ;;
+              Failed|Cancelled|TimedOut)
+                aws ssm list-command-invocations --command-id "$ID" --details \
+                  --query 'CommandInvocations[0].CommandPlugins[0].Output' --output text || true
+                exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "::error title=deploy::The config deploy didn't finish within 10 minutes (SSM command $ID)."
+          exit 1

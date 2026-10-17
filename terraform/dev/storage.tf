@@ -66,7 +66,7 @@ resource "aws_s3_bucket_cors_configuration" "dev" {
 }
 
 # Upload the demo deploy files. Editing a file in deploy/demo and re-applying (or merging to
-# main, which runs the Jenkinsfile's "Deploy demo config" stage) is how config changes reach the server.
+# main, which runs pipeline.yml's deploy-config job) is how config changes reach the server.
 resource "aws_s3_object" "demo_config" {
   for_each = fileset("${path.module}/../../deploy/demo", "*")
   bucket   = aws_s3_bucket.dev.id

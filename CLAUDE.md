@@ -4,8 +4,7 @@ Read this first, in every session. It is permanent: the rules shared by all thre
 to pick the work up from any new session.
 
 Sotto is a privacy-first SaaS where internal teams upload memos and meeting recordings, then ask
-questions and get answers with sources. It is built across three private repos, cloned side by
-side:
+questions and get answers with sources. It is built across three repos, cloned side by side:
 
 ```
 ~/code/sotto/
@@ -48,12 +47,17 @@ link, passkeys, Google and Microsoft, development and the demo on AWS eu-west-2)
 - **Every PR updates `docs/STATUS.md`** in this repo (open PRs, what's done, next step). A PR in
   sotto-api or sotto-web gets a companion STATUS update here. API + web pairs: the API PR merges
   first.
-- Never commit secrets. Only `.env.example` files. Real values live in local `.env`, Jenkins
-  credentials, or AWS SSM Parameter Store (`/sotto/<env>/…`). AWS access for CI uses IAM
-  access keys (ADR 0007); don't reintroduce OIDC.
-- **CI/CD runs on Jenkins** (ADR 0030) on its own EC2 server, `sotto-jenkins`, reached over SSH.
-  Each app repo's `Jenkinsfile` runs the checks and, on `main`, builds the images and deploys the
-  demo through the `sotto-deploy` SSM document. GitHub Actions is no longer used.
+- Never commit secrets. Only `.env.example` files. Real values live in local `.env`, GitHub
+  Actions secrets, or AWS SSM Parameter Store (`/sotto/<env>/…`). sotto-api and sotto-web are
+  public: anything in any commit, not just the latest files, can be read by anyone. AWS access
+  for CI uses an IAM access key kept as GitHub Actions secrets (ADR 0007); don't reintroduce
+  OIDC, and never give pull request jobs a secret (no `pull_request_target`).
+- **CI/CD runs on GitHub Actions** (ADR 0034; Jenkins is gone). Each repo's
+  `.github/workflows/pipeline.yml` runs the checks on every PR and push to `main`; on `main`,
+  after every check passes, the app repos push their arm64 images to ECR and deploy the demo
+  through the `sotto-deploy` SSM document, and this repo pushes `deploy/demo` when it changed.
+  While the demo is down, `main` skips the deploy; after `terraform apply`, run the workflow on
+  `main` (Actions → CI/CD → Run workflow) in sotto-api and sotto-web.
 - Teaching mode: annotate every Dockerfile, Compose file and Terraform file with short "why"
   comments. The owner is learning Cloud/Platform Engineering; phases 9–11 are "guide me" by
   default (task, hints, a way to check — he writes it, the agent reviews).
