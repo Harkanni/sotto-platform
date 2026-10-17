@@ -2,8 +2,8 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-17 (Phase 7 M5 part 2 ready for review: sotto-web#21)
-**Current phase:** 7 — Live notetaker (in progress: M5 done, in review; M6 next)
+**Updated:** 2026-10-17 (Phase 7 M6 started: sotto-api#17; ADR 0035 proposed)
+**Current phase:** 7 — Live notetaker (in progress: M6 of M0–M9; M5 part 2 in review)
 
 **Demo:** deployed from `main` by GitHub Actions: each app's CI/CD workflow (`.github/workflows/pipeline.yml`) pushes the images and deploys after every check passes, and skips that while the demo is down (`terraform output demo_url` prints the address)
 
@@ -27,6 +27,8 @@ work (the bot's ADR 0035, Compose and demo config) comes in its own PR.
 | --------- | -------------- | ------------------------- | ------------------------- | ------------------------------------------------------------------------------ |
 | M5 part 2 | sotto-web      | `feat/p7-live-now`        | sotto-web#21 (ready)      | Live now on Meetings and Home, Listen stories and e2e, smoothness, design docs |
 | M5 part 2 | sotto-platform | `docs/p7-live-now-status` | sotto-platform#24 (ready) | companion                                                                      |
+| M6        | sotto-api      | `feat/p7-notetaker`       | sotto-api#17 (draft)      | Calendars, sending the bot, the signed webhook, bot audio, the admin switch    |
+| M6–M9     | sotto-platform | `feat/p7-bot`             | this STATUS update        | ADR 0035 (the notetaker), later the bot's Compose and demo config              |
 
 ## Done
 
@@ -91,9 +93,9 @@ work (the bot's ADR 0035, Compose and demo config) comes in its own PR.
 ## Next step
 
 1. The owner: review and merge sotto-web#21 (Phase 7 M5 part 2, web only: no api change) and
-   this companion. An agent session continues with M6 in sotto-api (`PHASE_7_PROGRESS.md` →
-   Next steps): calendar connections, `MeetingBotProvider`, the calendar and bot routes; then
-   M7 (the Meet bot), M8 (the calendar screen) and M9.
+   sotto-platform#24. An agent session is on M6 in sotto-api (sotto-api#17,
+   `PHASE_7_PROGRESS.md` → Next steps): calendar connections, sending the bot, the signed
+   webhook (ADR 0035, proposed); then M7 (the Meet bot), M8 (the calendar screen) and M9.
 2. The owner: rotate the CI key and retire Jenkins (**Blockers**); `fix/ci-key-output` is merged
    (sotto-platform#23).
 3. Optional, the owner: a Paystack **test** secret key and plan codes in SSM
