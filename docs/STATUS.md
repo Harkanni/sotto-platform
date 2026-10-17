@@ -2,7 +2,7 @@
 
 > Handoff file. Every PR updates it. A new session reads this first, then continues from **Next step**.
 
-**Updated:** 2026-10-17 (CI/CD back on GitHub Actions, ADR 0034; Phase 7's first half merged)
+**Updated:** 2026-10-17 (CI/CD live on GitHub Actions: `main` deployed the demo; the CI key, ADR 0034)
 **Current phase:** 7 — Live notetaker (in progress: M5 of M0–M9)
 
 **Demo:** deployed from `main` by GitHub Actions: each app's CI/CD workflow (`.github/workflows/pipeline.yml`) pushes the images and deploys after every check passes, and skips that while the demo is down (`terraform output demo_url` prints the address)
@@ -54,7 +54,8 @@ work (the bot's ADR, Compose and demo config) comes in its own PR.
   `terraform apply`, run the workflow on `main` in sotto-api and sotto-web. A newer push to a PR
   stops its older run. Actions are pinned to commits, with Dependabot. The Jenkinsfiles are gone.
   Before the repos go public, every commit on every branch and PR of all three was scanned for
-  secrets (gitleaks 8.30.1 plus extra key patterns): nothing found.
+  secrets (gitleaks 8.30.1 plus extra key patterns): nothing found. All three repos are public;
+  `main`'s first runs (2026-10-17) passed every check, pushed the images and deployed the demo.
 - One Terraform stack (2026-10-15, `chore/single-stack`): `terraform/keep` is gone; `apply`
   brings everything up and `destroy` takes everything down, the demo's IP included (ADR 0033
   superseded). If `terraform/keep` was ever applied, destroy it first.
@@ -81,8 +82,7 @@ work (the bot's ADR, Compose and demo config) comes in its own PR.
    "Live now" row on Meetings and Home, stories for Listen, an e2e with Chromium's fake
    microphone, `pnpm smoothness`, the Listen section of `UI_DESIGN_SYSTEM.md`. Then M6–M8
    (calendar connections and the Meet bot) and M9.
-2. The owner: review and merge sotto-api#16, sotto-web#20 and sotto-platform#22 (any order),
-   then the switch-over steps under **Blockers**.
+2. The owner: merge `fix/ci-key-output`, then rotate the CI key and retire Jenkins (**Blockers**).
 3. Optional, the owner: a Paystack **test** secret key and plan codes in SSM
    (`/sotto/demo/PAYSTACK_SECRET_KEY`, `PAYSTACK_PLAN_PRO_MONTHLY`, …) to try Paystack's own test
    checkout; and a Managed provider key (`AI_MANAGED_CHAT`, `AI_MANAGED_KEY`) for the demo.
@@ -98,17 +98,15 @@ work (the bot's ADR, Compose and demo config) comes in its own PR.
       runs on a labelled stand-in).
 - [ ] Phase 7: a Google account for the notetaker bot ("Sotto Notetaker") is the owner's choice;
       without one it joins Meet as a guest that the host must admit.
-- [ ] CI/CD switch-over (ADR 0034), once sotto-api#16, sotto-web#20 and sotto-platform#22 merge:
-  - [ ] Make sotto-api and sotto-web public (Settings → General → Danger Zone). sotto-platform
-        can stay private (its checks fit the free monthly minutes) or go public too. The web's
-        accounts flow builds sotto-api from GitHub, so sotto-api must be public.
-  - [ ] In each repo, Settings → Actions → General: actions allowed (they may have been switched
-        off for Jenkins). The old `images` workflow can stay disabled; nothing uses it.
-  - [ ] Repository secrets: after a `terraform apply`, `terraform output -raw github_secrets | sh`
-        sets them in all three repos (or set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` by
-        hand). The same key sat on the internet-facing Jenkins server, so rotating it as Jenkins
-        goes is cheap hygiene: a new key for the IAM user, into `terraform.tfvars`, then the
-        command above.
+- [ ] CI/CD switch-over (ADR 0034; sotto-api#16, sotto-web#20, sotto-platform#22 merged):
+  - [x] All three repos public; Actions allowed.
+  - [x] Repository secrets: the repos still had the key secrets from before Jenkins, and `main`
+        deployed with them. `terraform output github_secrets` printed empty keys only because
+        `terraform.tfvars` holds no key. The output now leaves the key secrets alone in that case
+        instead of blanking them (`fix/ci-key-output`).
+  - [ ] Rotate the CI key as Jenkins goes (the same key sat on the internet-facing Jenkins
+        server): `terraform/README.md` → "The CI key". `terraform output -raw ci_policy` is the
+        user's least-privilege policy; attach it so the key can do only what CI needs.
   - [ ] Retire Jenkins: terminate `sotto-jenkins` (and its EBS volume, Elastic IP and security
         group, if any), delete the Jenkins webhooks in the three repos' settings, and revoke the
         GitHub token Jenkins used.

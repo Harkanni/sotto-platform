@@ -16,14 +16,21 @@ variable "github_repos" {
   default     = ["sotto-web", "sotto-api", "sotto-platform"]
 }
 
+# The CI user's access key (ci.tf says why that user lives outside this stack). Terraform creates
+# nothing with it: it only goes into `terraform output github_secrets`. Left empty, that output
+# skips the key secrets instead of blanking the ones the repos already have.
 variable "aws_access_key_id" {
-  type      = string
-  sensitive = true
+  description = "Access key ID of the CI user, for terraform output github_secrets. Optional."
+  type        = string
+  default     = ""
+  sensitive   = true
 }
 
 variable "aws_secret_access_key" {
-  type      = string
-  sensitive = true
+  description = "Secret access key of the CI user, for terraform output github_secrets. Optional."
+  type        = string
+  default     = ""
+  sensitive   = true
 }
 
 variable "alert_email" {
