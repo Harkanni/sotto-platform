@@ -81,8 +81,8 @@ work (the bot's ADR, Compose and demo config) comes in its own PR.
    "Live now" row on Meetings and Home, stories for Listen, an e2e with Chromium's fake
    microphone, `pnpm smoothness`, the Listen section of `UI_DESIGN_SYSTEM.md`. Then M6–M8
    (calendar connections and the Meet bot) and M9.
-2. The owner: review and merge sotto-api#16, sotto-web#20 and sotto-platform#22 (any order), then the
-   switch-over steps under **Blockers**.
+2. The owner: review and merge sotto-api#16, sotto-web#20 and sotto-platform#22 (any order),
+   then the switch-over steps under **Blockers**.
 3. Optional, the owner: a Paystack **test** secret key and plan codes in SSM
    (`/sotto/demo/PAYSTACK_SECRET_KEY`, `PAYSTACK_PLAN_PRO_MONTHLY`, …) to try Paystack's own test
    checkout; and a Managed provider key (`AI_MANAGED_CHAT`, `AI_MANAGED_KEY`) for the demo.
