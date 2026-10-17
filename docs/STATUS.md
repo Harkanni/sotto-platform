@@ -45,7 +45,7 @@ work (the bot's ADR, Compose and demo config) comes in its own PR.
   catalog and Switch model; Restricted proven never to reach outside AI; metering, quotas and
   plans; Paystack test mode behind `PaymentProvider`; embedding re-index. ADRs 0023–0027.
 - CI/CD back on GitHub Actions (ADR 0034, 2026-10-17; it supersedes the Jenkins setup of ADR
-  0030; `chore/github-actions` in all three repos). One workflow per repo,
+  0030; sotto-api#16, sotto-web#20, sotto-platform#22). One workflow per repo,
   `.github/workflows/pipeline.yml`, on GitHub's runners, arm64 for everything that builds or
   boots an image. It runs every check the Jenkinsfiles ran, as parallel jobs; on `main`, only
   after all of them pass, it pushes the images to ECR and deploys the demo (sotto-api,
@@ -81,7 +81,7 @@ work (the bot's ADR, Compose and demo config) comes in its own PR.
    "Live now" row on Meetings and Home, stories for Listen, an e2e with Chromium's fake
    microphone, `pnpm smoothness`, the Listen section of `UI_DESIGN_SYSTEM.md`. Then M6–M8
    (calendar connections and the Meet bot) and M9.
-2. The owner: review and merge the three `chore/github-actions` PRs (any order), then the
+2. The owner: review and merge sotto-api#16, sotto-web#20 and sotto-platform#22 (any order), then the
    switch-over steps under **Blockers**.
 3. Optional, the owner: a Paystack **test** secret key and plan codes in SSM
    (`/sotto/demo/PAYSTACK_SECRET_KEY`, `PAYSTACK_PLAN_PRO_MONTHLY`, …) to try Paystack's own test
@@ -98,7 +98,7 @@ work (the bot's ADR, Compose and demo config) comes in its own PR.
       runs on a labelled stand-in).
 - [ ] Phase 7: a Google account for the notetaker bot ("Sotto Notetaker") is the owner's choice;
       without one it joins Meet as a guest that the host must admit.
-- [ ] CI/CD switch-over (ADR 0034), once the `chore/github-actions` PRs are merged:
+- [ ] CI/CD switch-over (ADR 0034), once sotto-api#16, sotto-web#20 and sotto-platform#22 merge:
   - [ ] Make sotto-api and sotto-web public (Settings → General → Danger Zone). sotto-platform
         can stay private (its checks fit the free monthly minutes) or go public too. The web's
         accounts flow builds sotto-api from GitHub, so sotto-api must be public.
